@@ -62,9 +62,7 @@ const Navbar = () => {
                             0
                         </span>
                     </Link>
-                    <Link to="/admin/login" className="p-2 text-slate-600 hover:text-primary-600 transition-colors">
-                        <User size={20} />
-                    </Link>
+
                 </div>
 
                 {/* Mobile Toggle */}
@@ -100,9 +98,7 @@ const Navbar = () => {
                                 <Link to="/checkout" onClick={() => setIsOpen(false)} className="flex items-center gap-2 text-slate-800">
                                     <ShoppingCart size={20} /> Cart
                                 </Link>
-                                <Link to="/admin/login" onClick={() => setIsOpen(false)} className="flex items-center gap-2 text-slate-800">
-                                    <User size={20} /> Account
-                                </Link>
+
                             </div>
                         </div>
                     </motion.div>

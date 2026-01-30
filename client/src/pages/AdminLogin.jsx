@@ -25,7 +25,7 @@ const AdminLogin = () => {
             const { token } = response.data;
             localStorage.setItem('token', token);
             toast.success('Welcome Back, Administrator!');
-            navigate('/admin/dashboard');
+            navigate('/admin');
         } catch (error) {
             console.error('Login error:', error);
             toast.error(error.response?.data?.error || 'Invalid credentials');
