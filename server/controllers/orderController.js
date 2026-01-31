@@ -1,13 +1,14 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const crypto = require('crypto');
+const { cloudinary } = require('../middleware/upload');
 
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Public
 exports.createOrder = async (req, res) => {
     try {
-        const { customerName, mobile, address, productId, productDetails } = req.body;
+        const { customerName, mobile, address, productId, productDetails, uploadedImage: bodyImage } = req.body;
 
         if (!req.file) {
             return res.status(400).json({ success: false, error: 'Please upload an image' });
@@ -32,7 +33,7 @@ exports.createOrder = async (req, res) => {
             address,
             productId,
             productDetails: typeof productDetails === 'string' ? JSON.parse(productDetails) : productDetails,
-            uploadedImage: `/uploads/orders/${req.file.filename}`,
+            uploadedImage: req.file.path,
             totalPrice,
             status: 'Received'
         });
@@ -117,6 +118,14 @@ exports.deleteOrder = async (req, res) => {
         if (!order) {
             return res.status(404).json({ success: false, error: 'Order not found' });
         }
+        // Delete image from cloudinary
+        if (order.uploadedImage) {
+            const urlParts = order.uploadedImage.split('/');
+            const fileName = urlParts[urlParts.length - 1].split('.')[0];
+            const publicId = `flashback_frames/orders/${fileName}`;
+            await cloudinary.uploader.destroy(publicId);
+        }
+
         await order.deleteOne();
         res.status(200).json({ success: true, data: {} });
     } catch (error) {

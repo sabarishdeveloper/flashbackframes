@@ -1,6 +1,5 @@
 const Product = require('../models/Product');
-const fs = require('fs');
-const path = require('path');
+const { cloudinary } = require('../middleware/upload');
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -38,21 +37,31 @@ exports.getProduct = async (req, res) => {
 // @access  Private/Admin
 exports.createProduct = async (req, res) => {
     try {
+        console.log('Create Product Request Body:', req.body);
+        console.log('Create Product Files:', req.files);
+
         const productData = { ...req.body };
 
-        if (req.files) {
-            productData.images = req.files.map(file => `/uploads/products/${file.filename}`);
+        if (req.files && req.files.length > 0) {
+            productData.images = req.files.map(file => file.path);
         }
 
         // Options mapping if sent as string
-        if (typeof productData.options === 'string') {
-            productData.options = JSON.parse(productData.options);
+        if (productData.options && typeof productData.options === 'string') {
+            try {
+                productData.options = JSON.parse(productData.options);
+            } catch (e) {
+                console.error('Error parsing options:', e);
+                // If it fails to parse, we might want to set it to an empty object or delete it
+                delete productData.options;
+            }
         }
 
         const product = await Product.create(productData);
         res.status(201).json({ success: true, data: product });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Create Product Error:', error);
+        res.status(500).json({ success: false, error: error.message || 'Server Error' });
     }
 };
 
@@ -69,12 +78,17 @@ exports.updateProduct = async (req, res) => {
         const productData = { ...req.body };
 
         if (req.files && req.files.length > 0) {
-            // Remove old images if needed or append? Usually replace in this simple version
-            productData.images = req.files.map(file => `/uploads/products/${file.filename}`);
+            productData.images = req.files.map(file => file.path);
         }
 
-        if (typeof productData.options === 'string') {
-            productData.options = JSON.parse(productData.options);
+        // Options mapping if sent as string
+        if (productData.options && typeof productData.options === 'string') {
+            try {
+                productData.options = JSON.parse(productData.options);
+            } catch (e) {
+                console.error('Error parsing options:', e);
+                delete productData.options;
+            }
         }
 
         product = await Product.findByIdAndUpdate(req.params.id, productData, {
@@ -84,7 +98,8 @@ exports.updateProduct = async (req, res) => {
 
         res.status(200).json({ success: true, data: product });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Update Product Error:', error);
+        res.status(500).json({ success: false, error: error.message || 'Server Error' });
     }
 };
 
@@ -98,12 +113,18 @@ exports.deleteProduct = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Product not found' });
         }
 
-        // Delete images from filesystem
+        // Delete images from cloudinary
         if (product.images && product.images.length > 0) {
-            product.images.forEach(img => {
-                const fullPath = path.join(__dirname, '..', img);
-                if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+            const deletePromises = product.images.map(imgUrl => {
+                // Extract public_id from URL
+                // Example URL: https://res.cloudinary.com/cloudname/image/upload/v1234567/folder/public_id.jpg
+                const urlParts = imgUrl.split('/');
+                const fileName = urlParts[urlParts.length - 1].split('.')[0];
+                const folderName = urlParts[urlParts.length - 2];
+                const publicId = `flashback_frames/products/${fileName}`;
+                return cloudinary.uploader.destroy(publicId);
             });
+            await Promise.all(deletePromises);
         }
 
         await product.deleteOne();

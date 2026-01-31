@@ -144,6 +144,12 @@ const AdminDashboard = () => {
         }
     };
 
+    const getImageUrl = (url) => {
+        if (!url) return '';
+        if (url.startsWith('http')) return url;
+        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${url}`;
+    };
+
     const ProductModal = () => (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <motion.div
@@ -389,7 +395,7 @@ const AdminDashboard = () => {
                                                         <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden">
                                                             {product.images?.[0] && (
                                                                 <img
-                                                                    src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${product.images[0]}`}
+                                                                    src={getImageUrl(product.images[0])}
                                                                     className="w-full h-full object-cover"
                                                                     alt={product.name}
                                                                 />
@@ -467,7 +473,7 @@ const AdminDashboard = () => {
                                                 <td className="px-6 py-5 font-bold text-slate-900 text-sm">${order.totalPrice?.toFixed(2)}</td>
                                                 <td className="px-6 py-5 text">
                                                     <div className="flex gap-2">
-                                                        <a href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${order.uploadedImage}`} target="_blank" className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-all"><Edit2 size={16} /></a>
+                                                        <a href={getImageUrl(order.uploadedImage)} target="_blank" className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-all"><Edit2 size={16} /></a>
                                                         <button className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all"><Trash2 size={16} /></button>
                                                     </div>
                                                 </td>
