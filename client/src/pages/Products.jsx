@@ -80,8 +80,8 @@ const Products = () => {
                             key={cat}
                             onClick={() => setActiveCategory(cat)}
                             className={`whitespace-nowrap px-6 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === cat
-                                    ? 'bg-primary-600 text-white shadow-md'
-                                    : 'bg-white text-slate-600 border border-slate-200 hover:border-primary-300'
+                                ? 'bg-primary-600 text-white shadow-md'
+                                : 'bg-white text-slate-600 border border-slate-200 hover:border-primary-300'
                                 }`}
                         >
                             {cat}

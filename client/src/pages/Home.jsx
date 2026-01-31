@@ -151,7 +151,7 @@ const Home = () => {
                                 <div className="p-5">
                                     <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">{p.category}</p>
                                     <h3 className="text-lg font-bold text-slate-800 mb-1 group-hover:text-primary-600 transition-colors h-12 overflow-hidden">{p.name}</h3>
-                                    <p className="text-primary-600 font-bold">${p.price}</p>
+                                    <p className="text-primary-600 font-bold">₹{p.price}</p>
                                     <Link to={`/product/${p._id}`} className="mt-4 block w-full py-2 rounded-lg bg-slate-50 text-center text-sm font-bold text-slate-700 hover:bg-primary-600 hover:text-white transition-all">
                                         View Details
                                     </Link>

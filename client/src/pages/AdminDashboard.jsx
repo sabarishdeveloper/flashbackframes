@@ -112,7 +112,7 @@ const AdminDashboard = () => {
     const stats = [
         {
             label: 'Total Revenue',
-            value: `$${orders.reduce((acc, curr) => acc + (curr.totalPrice || 0), 0).toFixed(2)}`,
+            value: `₹${orders.reduce((acc, curr) => acc + (curr.totalPrice || 0), 0).toFixed(2)}`,
             icon: <DollarSign />, trend: '+12.5%', color: 'bg-emerald-50 text-emerald-600'
         },
         {
@@ -407,7 +407,7 @@ const AdminDashboard = () => {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5 font-bold text-slate-900 text-sm">${product.price}</td>
+                                                <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{product.price}</td>
                                                 <td className="px-6 py-5">
                                                     <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
                                                 </td>
@@ -470,7 +470,7 @@ const AdminDashboard = () => {
                                                         ))}
                                                     </select>
                                                 </td>
-                                                <td className="px-6 py-5 font-bold text-slate-900 text-sm">${order.totalPrice?.toFixed(2)}</td>
+                                                <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
                                                 <td className="px-6 py-5 text">
                                                     <div className="flex gap-2">
                                                         <a href={getImageUrl(order.uploadedImage)} target="_blank" className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-all"><Edit2 size={16} /></a>

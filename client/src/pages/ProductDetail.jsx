@@ -135,7 +135,7 @@ const ProductDetail = () => {
                             </div>
                             <h1 className="text-4xl md:text-5xl font-display font-bold text-slate-900 mb-4">{product.name}</h1>
                             <div className="flex items-center gap-4 mb-6">
-                                <span className="text-3xl font-display font-bold text-primary-600">${product.price}</span>
+                                <span className="text-3xl font-display font-bold text-primary-600">₹{product.price}</span>
                                 <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
                                     <span className="text-yellow-700 font-bold text-sm">4.8</span>
                                     <div className="flex gap-0.5">
@@ -160,8 +160,8 @@ const ProductDetail = () => {
                                                 key={size}
                                                 onClick={() => setSelectedSize(size)}
                                                 className={`px-6 py-3 rounded-xl text-sm font-bold transition-all border-2 ${selectedSize === size
-                                                        ? 'border-primary-600 bg-primary-50 text-primary-700 shadow-sm'
-                                                        : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'
+                                                    ? 'border-primary-600 bg-primary-50 text-primary-700 shadow-sm'
+                                                    : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'
                                                     }`}
                                             >
                                                 {size}
@@ -181,8 +181,8 @@ const ProductDetail = () => {
                                                 key={mat}
                                                 onClick={() => setSelectedMaterial(mat)}
                                                 className={`px-6 py-3 rounded-xl text-sm font-bold transition-all border-2 ${selectedMaterial === mat
-                                                        ? 'border-primary-600 bg-primary-50 text-primary-700 shadow-sm'
-                                                        : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'
+                                                    ? 'border-primary-600 bg-primary-50 text-primary-700 shadow-sm'
+                                                    : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'
                                                     }`}
                                             >
                                                 {mat}

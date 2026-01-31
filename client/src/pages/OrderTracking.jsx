@@ -122,8 +122,8 @@ const OrderTracking = () => {
                                             return (
                                                 <div key={idx} className="flex md:flex-col items-start md:items-center gap-4 md:gap-2 flex-1">
                                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 ${stepStatus === 'completed' ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' :
-                                                            stepStatus === 'current' ? 'bg-white border-2 border-primary-600 text-primary-600 animate-pulse' :
-                                                                'bg-white border-2 border-slate-100 text-slate-300'
+                                                        stepStatus === 'current' ? 'bg-white border-2 border-primary-600 text-primary-600 animate-pulse' :
+                                                            'bg-white border-2 border-slate-100 text-slate-300'
                                                         }`}>
                                                         {stepStatus === 'completed' ? <CheckCircle size={24} /> : step.icon}
                                                     </div>
@@ -147,11 +147,11 @@ const OrderTracking = () => {
                                         <span className="text-slate-500">
                                             {order.productDetails?.quantity}x {order.productId?.name} ({order.productDetails?.size}, {order.productDetails?.material})
                                         </span>
-                                        <span className="font-bold text-slate-800">${order.totalPrice?.toFixed(2)}</span>
+                                        <span className="font-bold text-slate-800">₹{order.totalPrice?.toFixed(2)}</span>
                                     </div>
                                     <div className="pt-2 flex justify-between font-bold text-slate-900 text-lg">
                                         <span>Total Paid</span>
-                                        <span>${order.totalPrice?.toFixed(2)}</span>
+                                        <span>₹{order.totalPrice?.toFixed(2)}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-4 text">
