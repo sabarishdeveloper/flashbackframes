@@ -8,7 +8,7 @@ const { cloudinary } = require('../middleware/upload');
 // @access  Public
 exports.createOrder = async (req, res) => {
     try {
-        const { customerName, mobile, address, productId, productDetails, uploadedImage: bodyImage } = req.body;
+        const { customerName, mobile, address, productId, productDetails, paymentMethod, uploadedImage: bodyImage } = req.body;
 
         if (!req.file) {
             return res.status(400).json({ success: false, error: 'Please upload an image' });
@@ -35,6 +35,7 @@ exports.createOrder = async (req, res) => {
             productDetails: typeof productDetails === 'string' ? JSON.parse(productDetails) : productDetails,
             uploadedImage: req.file.path,
             totalPrice,
+            paymentMethod: paymentMethod || 'Prepaid',
             status: 'Received'
         });
 

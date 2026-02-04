@@ -43,6 +43,22 @@ const orderSchema = new mongoose.Schema({
     totalPrice: {
         type: Number,
     },
+    paymentStatus: {
+        type: String,
+        enum: ['Pending', 'Paid'],
+        default: 'Pending',
+    },
+    razorpayOrderId: {
+        type: String,
+    },
+    razorpayPaymentId: {
+        type: String,
+    },
+    paymentMethod: {
+        type: String,
+        enum: ['Prepaid', 'COD'],
+        default: 'Prepaid',
+    },
     createdAt: {
         type: Date,
         default: Date.now,

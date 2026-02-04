@@ -74,6 +74,37 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleDeleteOrder = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this order?')) return;
+        try {
+            await orderAPI.delete(id);
+            toast.success('Order deleted successfully');
+            fetchOrders();
+        } catch (error) {
+            toast.error('Failed to delete order');
+        }
+    };
+
+    const handleDownload = async (url, filename) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename || 'order-image.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download error:', error);
+            // Fallback if fetch fails (e.g. CORS issues)
+            window.open(url, '_blank');
+            toast.info('Opened in new tab (Download blocked by browser)');
+        }
+    };
+
     const handleProductSubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
@@ -471,10 +502,22 @@ const AdminDashboard = () => {
                                                     </select>
                                                 </td>
                                                 <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
-                                                <td className="px-6 py-5 text">
-                                                    <div className="flex gap-2">
-                                                        <a href={getImageUrl(order.uploadedImage)} target="_blank" className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-all"><Edit2 size={16} /></a>
-                                                        <button className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all"><Trash2 size={16} /></button>
+                                                <td className="px-6 py-5">
+                                                    <div className="flex gap-2 text-right justify-end">
+                                                        <button
+                                                            onClick={() => handleDownload(getImageUrl(order.uploadedImage), `order-${order.orderId}.jpg`)}
+                                                            className="p-2 hover:bg-primary-50 text-slate-400 hover:text-primary-600 rounded-lg transition-all"
+                                                            title="Download Image"
+                                                        >
+                                                            <Download size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteOrder(order._id)}
+                                                            className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all"
+                                                            title="Delete Order"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>

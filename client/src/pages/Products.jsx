@@ -118,7 +118,7 @@ const Products = () => {
                                 <p className="text-xl font-display font-bold text-primary-600 mb-4">${product.price}</p>
                                 <Link
                                     to={`/product/${product._id}`}
-                                    className="btn-secondary w-full flex items-center justify-center gap-2 group-hover:bg-primary-600 group-hover:text-white group-hover:border-primary-600 transition-all"
+                                    className="btn btn-primary w-full flex items-center justify-center gap-2"
                                 >
                                     View Details
                                     <ArrowRight size={16} />

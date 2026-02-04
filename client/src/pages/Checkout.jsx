@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, ChevronRight, CreditCard, Truck, CheckCircle2, Loader2 } from 'lucide-react';
+import { ShoppingBag, ChevronRight, CreditCard, Truck, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { orderAPI } from '../services/apiService';
+import { orderAPI, paymentAPI } from '../services/apiService';
+import { loadRazorpayScript } from '../utils/loadRazorpay';
 import { toast } from 'sonner';
 
 const Checkout = () => {
@@ -23,9 +24,87 @@ const Checkout = () => {
     const [loading, setLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [orderResponse, setOrderResponse] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('Prepaid');
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handlePayment = async (razorpayOrderId, amount, orderData) => {
+        const res = await loadRazorpayScript();
+
+        if (!res) {
+            toast.error('Razorpay SDK failed to load. Are you online?');
+            return;
+        }
+
+        const options = {
+            key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+            amount: Math.round(amount * 100),
+            currency: "INR",
+            name: "Flashback Frames",
+            description: "Photo Framing & Customized Gifts",
+            image: "/logo.png",
+            order_id: razorpayOrderId,
+            handler: async function (response) {
+                setLoading(true);
+                try {
+                    // Combine payment details with order form data
+                    const finalData = new FormData();
+                    finalData.append('razorpay_order_id', response.razorpay_order_id);
+                    finalData.append('razorpay_payment_id', response.razorpay_payment_id);
+                    finalData.append('razorpay_signature', response.razorpay_signature);
+
+                    // Append all order details
+                    finalData.append('customerName', orderData.customerName);
+                    finalData.append('mobile', orderData.mobile);
+                    finalData.append('email', orderData.email);
+                    finalData.append('address', orderData.address);
+                    finalData.append('productId', orderData.productId);
+                    finalData.append('image', uploadedFile);
+                    finalData.append('paymentMethod', 'Prepaid');
+                    finalData.append('productDetails', JSON.stringify(orderData.productDetails));
+
+                    const verifyRes = await paymentAPI.verifyAndCreate(finalData);
+
+                    if (verifyRes.data.success) {
+                        setOrderResponse(verifyRes.data.data);
+                        setIsSubmitted(true);
+                        toast.success('Payment successful and order placed!');
+                    } else {
+                        toast.error(verifyRes.data.error || 'Payment verification failed');
+                    }
+                } catch (error) {
+                    console.error('Verification error:', error);
+                    toast.error(error.response?.data?.error || 'Something went wrong during payment verification');
+                } finally {
+                    setLoading(false);
+                }
+            },
+            prefill: {
+                name: formData.customerName,
+                email: formData.email,
+                contact: formData.mobile,
+            },
+            notes: {
+                address: formData.address,
+            },
+            theme: {
+                color: "#4f46e5",
+            },
+            modal: {
+                ondismiss: function () {
+                    setLoading(false);
+                }
+            }
+        };
+
+        const paymentObject = new window.Razorpay(options);
+        paymentObject.on('payment.failed', function (response) {
+            toast.error(response.error.description || 'Payment Failed');
+            setLoading(false);
+        });
+        paymentObject.open();
     };
 
     const handleSubmit = async (e) => {
@@ -35,28 +114,58 @@ const Checkout = () => {
             return;
         }
 
-        setLoading(true);
-        try {
-            const data = new FormData();
-            data.append('customerName', formData.customerName);
-            data.append('mobile', formData.mobile);
-            data.append('address', `${formData.address}, ${formData.city}, ${formData.state} - ${formData.zip}`);
-            data.append('productId', orderDetails.productId);
-            data.append('image', uploadedFile);
-            data.append('productDetails', JSON.stringify({
+        const subtotal = orderDetails.productPrice * orderDetails.quantity;
+        const tax = subtotal * 0.08;
+        const totalAmount = subtotal + tax;
+
+        const orderData = {
+            customerName: formData.customerName,
+            mobile: formData.mobile,
+            email: formData.email,
+            address: `${formData.address}, ${formData.city}, ${formData.state} - ${formData.zip}`,
+            productId: orderDetails.productId,
+            productDetails: {
                 size: orderDetails.size,
                 material: orderDetails.material,
                 quantity: orderDetails.quantity
-            }));
+            }
+        };
 
-            const response = await orderAPI.create(data);
-            setOrderResponse(response.data.data);
-            setIsSubmitted(true);
-            toast.success('Order placed successfully!');
+        setLoading(true);
+        try {
+            if (paymentMethod === 'COD') {
+                // For COD, create order directly
+                const data = new FormData();
+                data.append('customerName', orderData.customerName);
+                data.append('mobile', orderData.mobile);
+                data.append('address', orderData.address);
+                data.append('productId', orderData.productId);
+                data.append('image', uploadedFile);
+                data.append('paymentMethod', 'COD');
+                data.append('productDetails', JSON.stringify(orderData.productDetails));
+
+                const orderCreateRes = await orderAPI.create(data);
+                if (orderCreateRes.data.success) {
+                    setOrderResponse(orderCreateRes.data.data);
+                    setIsSubmitted(true);
+                    toast.success('Order placed successfully (COD)!');
+                }
+            } else {
+                // For Prepaid, create Razorpay order first
+                const rzpOrderRes = await paymentAPI.createOrder(totalAmount);
+
+                if (rzpOrderRes.data.success) {
+                    await handlePayment(
+                        rzpOrderRes.data.order.id,
+                        totalAmount,
+                        orderData
+                    );
+                }
+            }
+
         } catch (error) {
             console.error('Checkout error:', error);
             toast.error(error.response?.data?.error || 'Failed to place order');
-        } finally {
             setLoading(false);
         }
     };
@@ -197,12 +306,42 @@ const Checkout = () => {
                                         <CreditCard className="text-primary-600" />
                                         Payment Method
                                     </h3>
-                                    <div className="p-4 rounded-xl border-2 border-primary-600 bg-primary-50 text-primary-700 flex justify-between items-center">
-                                        <div>
-                                            <span className="font-bold block">Cash on Delivery</span>
-                                            <span className="text-xs text-primary-500">Pay when your frame arrives</span>
+                                    <div className="space-y-3">
+                                        <div
+                                            onClick={() => setPaymentMethod('Prepaid')}
+                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${paymentMethod === 'Prepaid' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'Prepaid' ? 'border-primary-600' : 'border-slate-300'}`}>
+                                                    {paymentMethod === 'Prepaid' && <div className="w-2.5 h-2.5 bg-primary-600 rounded-full" />}
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold block">Online Payment</span>
+                                                    <span className="text-xs">Secure UPI, Card, Netbanking</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {/* Simplified icons or text */}
+                                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">UPI</span>
+                                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">CARD</span>
+                                            </div>
                                         </div>
-                                        <CheckCircle2 size={24} />
+
+                                        <div
+                                            onClick={() => setPaymentMethod('COD')}
+                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${paymentMethod === 'COD' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'COD' ? 'border-primary-600' : 'border-slate-300'}`}>
+                                                    {paymentMethod === 'COD' && <div className="w-2.5 h-2.5 bg-primary-600 rounded-full" />}
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold block">Cash on Delivery</span>
+                                                    <span className="text-xs">Pay when your frame arrives</span>
+                                                </div>
+                                            </div>
+                                            <Truck size={20} className={paymentMethod === 'COD' ? 'text-primary-600' : 'text-slate-400'} />
+                                        </div>
                                     </div>
                                 </div>
 

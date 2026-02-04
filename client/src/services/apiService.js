@@ -26,3 +26,11 @@ export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
     getMe: () => api.get('/auth/me'),
 };
+
+export const paymentAPI = {
+    createOrder: (amount) => api.post('/payment/create-order', { amount }),
+    verifyPayment: (paymentData) => api.post('/payment/verify', paymentData),
+    verifyAndCreate: (formData) => api.post('/payment/verify-and-create', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+};
