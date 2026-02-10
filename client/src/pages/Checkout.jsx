@@ -150,6 +150,25 @@ const Checkout = () => {
                     setIsSubmitted(true);
                     toast.success('Order placed successfully (COD)!');
                 }
+            } else if (paymentMethod === 'PhonePe') {
+                // For PhonePe, initiate payment on backend
+                const formDataToSubmit = new FormData();
+                formDataToSubmit.append('customerName', orderData.customerName);
+                formDataToSubmit.append('mobile', orderData.mobile);
+                formDataToSubmit.append('email', orderData.email);
+                formDataToSubmit.append('address', orderData.address);
+                formDataToSubmit.append('productId', orderData.productId);
+                formDataToSubmit.append('image', uploadedFile);
+                formDataToSubmit.append('amount', totalAmount);
+                formDataToSubmit.append('productDetails', JSON.stringify(orderData.productDetails));
+
+                const phonepeRes = await paymentAPI.phonePeInitiate(formDataToSubmit);
+                if (phonepeRes.data.success) {
+                    // Redirect to PhonePe payment page
+                    window.location.href = phonepeRes.data.redirectUrl;
+                } else {
+                    toast.error(phonepeRes.data.error || 'PhonePe initiation failed');
+                }
             } else {
                 // For Prepaid, create Razorpay order first
                 const rzpOrderRes = await paymentAPI.createOrder(totalAmount);
@@ -324,6 +343,24 @@ const Checkout = () => {
                                                 {/* Simplified icons or text */}
                                                 <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">UPI</span>
                                                 <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">CARD</span>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            onClick={() => setPaymentMethod('PhonePe')}
+                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${paymentMethod === 'PhonePe' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'PhonePe' ? 'border-primary-600' : 'border-slate-300'}`}>
+                                                    {paymentMethod === 'PhonePe' && <div className="w-2.5 h-2.5 bg-primary-600 rounded-full" />}
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold block">PhonePe</span>
+                                                    <span className="text-xs">UPI, Cards, QR (Trusted)</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">UPI</span>
                                             </div>
                                         </div>
 

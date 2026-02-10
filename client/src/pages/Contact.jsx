@@ -16,32 +16,32 @@ const Contact = () => {
                         <div className="lg:col-span-5 space-y-8">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
                                 <div className="p-6 rounded-2xl bg-primary-50 border border-primary-100 flex gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-primary-600 shadow-sm">
+                                    <div className="w-12 h-12 rounded-xl bg-white flex-shrink-0 flex items-center justify-center text-primary-600 shadow-sm">
                                         <Mail size={24} />
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-slate-900">Email Us</h4>
-                                        <p className="text-sm text-slate-500">hello@flashbackframes.com</p>
+                                        <p className="text-sm text-slate-500">flashback365@gmail.com</p>
                                     </div>
                                 </div>
 
                                 <div className="p-6 rounded-2xl bg-accent-50 border border-accent-100 flex gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-accent-600 shadow-sm">
+                                    <div className="w-12 h-12 rounded-xl bg-white flex-shrink-0 flex items-center justify-center text-accent-600 shadow-sm">
                                         <Phone size={24} />
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-slate-900">Call Us</h4>
-                                        <p className="text-sm text-slate-500">+1 (555) 000-1234</p>
+                                        <p className="text-sm text-slate-500">+91 94432 62643</p>
                                     </div>
                                 </div>
 
                                 <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 flex gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-slate-600 shadow-sm">
+                                    <div className="w-12 h-12 rounded-xl bg-white flex-shrink-0 flex items-center justify-center text-slate-600 shadow-sm">
                                         <MapPin size={24} />
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-slate-900">Visit Us</h4>
-                                        <p className="text-sm text-slate-500">123 Gallery Street, Creative Hub, NY 10001</p>
+                                        <p className="text-sm text-slate-500">148, Palayamkottai Road, Opposite South Police Station, Toovipuram, Thoothukudi, Tamil Nadu 628001</p>
                                     </div>
                                 </div>
                             </div>
@@ -49,7 +49,7 @@ const Contact = () => {
                             <div className="pt-6">
                                 <h4 className="font-bold text-slate-900 mb-4">Quick Support</h4>
                                 <div className="flex flex-col sm:flex-row gap-4">
-                                    <a href="#" className="btn bg-[#25D366] text-white flex-grow hover:opacity-90 transition-opacity">
+                                    <a href="https://wa.me/919443262643" target="_blank" rel="noopener noreferrer" className="btn bg-[#25D366] text-white flex-grow hover:opacity-90 transition-opacity">
                                         <MessageCircle size={20} className="mr-2" />
                                         WhatsApp
                                     </a>
@@ -61,13 +61,17 @@ const Contact = () => {
                             </div>
 
                             {/* Map Placeholder */}
-                            <div className="rounded-3xl overflow-hidden h-64 bg-slate-100 relative group border border-slate-200">
-                                <div className="absolute inset-0 bg-[url('https://api.mapbox.com/styles/v1/mapbox/light-v10/static/-73.985,40.748,12,0/600x400?access_token=none')] bg-cover bg-center grayscale opacity-60 group-hover:grayscale-0 transition-all duration-700"></div>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="p-3 bg-white rounded-full shadow-xl">
-                                        <MapPin size={32} className="text-accent-500" />
-                                    </div>
-                                </div>
+                            <div className="rounded-3xl overflow-hidden h-80 bg-slate-100 relative border border-slate-200 shadow-inner">
+                                <iframe
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3942.838211948646!2d78.1368686!3d8.8012661!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3b03ef5c44e8052b%3A0xf5d36604ee49441c!2sflashback%20frames%20%26%20studio!5e0!3m2!1sen!2sin!4v1770716487227!5m2!1sen!2sin"
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: 0 }}
+                                    allowFullScreen=""
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    title="Flashback Frames Location"
+                                ></iframe>
                             </div>
                         </div>
 
@@ -79,17 +83,17 @@ const Contact = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-sm font-bold text-slate-700">First Name</label>
-                                            <input type="text" placeholder="John" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all" />
+                                            <input type="text" placeholder="Vijay" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-bold text-slate-700">Last Name</label>
-                                            <input type="text" placeholder="Doe" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all" />
+                                            <input type="text" placeholder="Kumar" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all" />
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-slate-700">Email Address</label>
-                                        <input type="email" placeholder="john@example.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all" />
+                                        <input type="email" placeholder="vijaykumar@example.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all" />
                                     </div>
 
                                     <div className="space-y-2">

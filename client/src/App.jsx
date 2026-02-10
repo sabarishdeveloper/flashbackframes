@@ -12,6 +12,7 @@ import OrderTracking from './pages/OrderTracking';
 import Contact from './pages/Contact';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import PaymentStatus from './pages/PaymentStatus';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/track" element={<OrderTracking />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/payment-status" element={<PaymentStatus />} />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />

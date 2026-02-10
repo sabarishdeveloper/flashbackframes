@@ -15,7 +15,12 @@ const Footer = () => {
                             Preserving your precious memories in premium frames and personalized gifts. Handcrafted with love.
                         </p>
                         <div className="flex gap-4 pt-2">
-                            <a href="#" className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary-600 transition-colors">
+                            <a
+                                href="https://www.instagram.com/shot_by_flashbackstudio?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary-600 transition-colors"
+                            >
                                 <Instagram size={18} />
                             </a>
                             <a href="#" className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary-600 transition-colors">
@@ -52,15 +57,15 @@ const Footer = () => {
                         <ul className="space-y-4 text-sm">
                             <li className="flex gap-3">
                                 <MapPin size={18} className="text-primary-500 flex-shrink-0" />
-                                <span>123 Gallery Street, Creative Hub, NY 10001</span>
+                                <span>148, Palayamkottai Road, Opposite South Police Station, Toovipuram, Thoothukudi, Tamil Nadu 628001</span>
                             </li>
                             <li className="flex gap-3">
                                 <Phone size={18} className="text-primary-500 flex-shrink-0" />
-                                <span>+1 (555) 000-1234</span>
+                                <span>+91 94432 62643</span>
                             </li>
                             <li className="flex gap-3">
                                 <Mail size={18} className="text-primary-500 flex-shrink-0" />
-                                <span>hello@flashbackframes.com</span>
+                                <span>flashback365@gmail.com</span>
                             </li>
                         </ul>
                     </div>

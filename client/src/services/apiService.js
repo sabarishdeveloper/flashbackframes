@@ -33,4 +33,8 @@ export const paymentAPI = {
     verifyAndCreate: (formData) => api.post('/payment/verify-and-create', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     }),
+    phonePeInitiate: (formData) => api.post('/payment/phonepe/initiate', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    phonePeStatus: (merchantTransactionId) => api.get(`/payment/phonepe/status/${merchantTransactionId}`),
 };

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
     Users, ShoppingBag, DollarSign, Package,
     Search, Bell, MoreVertical, Edit2, Trash2,
-    Download, Filter, Sidebar, Loader2, LogOut, Plus, X
+    Download, Filter, Sidebar, Loader2, LogOut, Plus, X, Eye
 } from 'lucide-react';
 import { orderAPI, productAPI } from '../services/apiService';
 import { toast } from 'sonner';
@@ -504,8 +504,17 @@ const AdminDashboard = () => {
                                                 <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
                                                 <td className="px-6 py-5">
                                                     <div className="flex gap-2 text-right justify-end">
+                                                        <a
+                                                            href={getImageUrl(order.uploadedImage)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-900 rounded-lg transition-all"
+                                                            title="View Image"
+                                                        >
+                                                            <Eye size={16} />
+                                                        </a>
                                                         <button
-                                                            onClick={() => handleDownload(getImageUrl(order.uploadedImage), `order-${order.orderId}.jpg`)}
+                                                            onClick={() => handleDownload(getImageUrl(order.uploadedImage), `${order.customerName.replace(/\s+/g, '-').toLowerCase()}-${order.orderId}.jpg`)}
                                                             className="p-2 hover:bg-primary-50 text-slate-400 hover:text-primary-600 rounded-lg transition-all"
                                                             title="Download Image"
                                                         >

@@ -115,7 +115,7 @@ const Products = () => {
                                 <h3 className="text-lg font-bold text-slate-800 mb-1 leading-tight group-hover:text-primary-600 transition-colors h-14 overflow-hidden">
                                     {product.name}
                                 </h3>
-                                <p className="text-xl font-display font-bold text-primary-600 mb-4">${product.price}</p>
+                                <p className="text-xl font-display font-bold text-primary-600 mb-4">₹{product.price}</p>
                                 <Link
                                     to={`/product/${product._id}`}
                                     className="btn btn-primary w-full flex items-center justify-center gap-2"
