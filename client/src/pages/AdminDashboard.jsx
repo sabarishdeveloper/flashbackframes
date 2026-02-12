@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import {
     Users, ShoppingBag, DollarSign, Package,
     Search, Bell, MoreVertical, Edit2, Trash2,
-    Download, Filter, Sidebar, Loader2, LogOut, Plus, X, Eye
+    Download, Filter, Sidebar, Loader2, LogOut, Plus, X, Eye, Menu
 } from 'lucide-react';
 import { orderAPI, productAPI } from '../services/apiService';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('orders');
@@ -18,6 +19,7 @@ const AdminDashboard = () => {
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -438,47 +440,90 @@ const AdminDashboard = () => {
         );
     };
 
-    return (
-        <div className="min-h-screen bg-slate-50 flex">
-            {/* Sidebar */}
-            <div className="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center text-white font-bold">F</div>
-                        <span className="font-display font-bold text-slate-900">AdminPanel</span>
-                    </div>
+    const SidebarContent = () => (
+        <>
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center text-white font-bold">F</div>
+                    <span className="font-display font-bold text-slate-900 text-lg">AdminPanel</span>
                 </div>
-                <nav className="flex-grow p-4 space-y-2">
-                    {['Dashboard', 'Orders', 'Products', 'Customers'].map((item) => (
-                        <button
-                            key={item}
-                            onClick={() => setActiveTab(item.toLowerCase())}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === item.toLowerCase()
-                                ? 'bg-primary-50 text-primary-600'
-                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                                }`}
-                        >
-                            {item === 'Dashboard' && <Sidebar size={18} />}
-                            {item === 'Orders' && <ShoppingBag size={18} />}
-                            {item === 'Products' && <Package size={18} />}
-                            {item === 'Customers' && <Users size={18} />}
-                            {item}
-                        </button>
-                    ))}
-                </nav>
-                <div className="p-4 border-t border-slate-100">
-                    <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-500 hover:bg-rose-50 transition-all">
-                        <LogOut size={18} />
-                        Logout
+                <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 hover:bg-slate-100 rounded-lg">
+                    <X size={20} className="text-slate-500" />
+                </button>
+            </div>
+            <nav className="flex-grow p-4 space-y-2 overflow-y-auto">
+                {[
+                    { id: 'dashboard', label: 'Dashboard', icon: <Sidebar size={18} /> },
+                    { id: 'orders', label: 'Orders', icon: <ShoppingBag size={18} /> },
+                    { id: 'products', label: 'Products', icon: <Package size={18} /> },
+                    { id: 'customers', label: 'Customers', icon: <Users size={18} /> },
+                ].map((item) => (
+                    <button
+                        key={item.id}
+                        onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === item.id
+                            ? 'bg-primary-50 text-primary-600'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                    >
+                        {item.icon}
+                        {item.label}
                     </button>
-                </div>
+                ))}
+            </nav>
+            <div className="p-4 border-t border-slate-100">
+                <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-500 hover:bg-rose-50 transition-all">
+                    <LogOut size={18} />
+                    Logout
+                </button>
+            </div>
+        </>
+    );
+
+    return (
+        <div className="min-h-screen bg-slate-50 flex overflow-x-hidden">
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col sticky top-0 h-screen">
+                <SidebarContent />
             </div>
 
+            {/* Mobile Sidebar */}
+            <AnimatePresence>
+                {isSidebarOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
+                        />
+                        <motion.div
+                            initial={{ x: '-100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '-100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed inset-y-0 left-0 w-[280px] bg-white z-50 lg:hidden flex flex-col shadow-2xl"
+                        >
+                            <SidebarContent />
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             <div className="flex-grow">
-                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
-                    <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 w-96">
-                        <Search size={18} className="text-slate-400" />
-                        <input type="text" placeholder="Search orders..." className="bg-transparent border-none outline-none text-sm w-full" />
+                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 w-full">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="lg:hidden p-2 hover:bg-slate-100 rounded-lg text-slate-600"
+                        >
+                            <Menu size={24} />
+                        </button>
+                        <div className="hidden sm:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 w-64 md:w-96">
+                            <Search size={18} className="text-slate-400 flex-shrink-0" />
+                            <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none text-sm w-full" />
+                        </div>
                     </div>
                     <div className="flex items-center gap-4">
                         <button className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-500">
@@ -490,11 +535,11 @@ const AdminDashboard = () => {
                     </div>
                 </header>
 
-                <div className="p-8">
-                    <div className="flex justify-between items-end mb-8">
+                <div className="p-4 md:p-8 max-w-[1600px] mx-auto w-full">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
                         <div>
-                            <h1 className="text-3xl font-display font-bold text-slate-900 capitalize">{activeTab} Overview</h1>
-                            <p className="text-slate-500">Real-time data from your store.</p>
+                            <h1 className="text-2xl md:text-3xl font-display font-bold text-slate-900 capitalize">{activeTab} Overview</h1>
+                            <p className="text-xs md:text-sm text-slate-500">Real-time data from your store.</p>
                         </div>
                         <div className="flex gap-3">
                             {activeTab === 'products' && (
@@ -542,101 +587,175 @@ const AdminDashboard = () => {
                         {loading ? (
                             <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-primary-600" /></div>
                         ) : activeTab === 'products' ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Price</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {products.map((product) => (
-                                            <tr key={product._id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-6 py-5">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden">
-                                                            {product.images?.[0] && (
-                                                                <img
-                                                                    src={getImageUrl(product.images[0])}
-                                                                    className="w-full h-full object-cover"
-                                                                    alt={product.name}
-                                                                />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-slate-800 text-sm">{product.name}</span>
-                                                            <span className="text-[10px] text-slate-400 truncate w-48">{product.description}</span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{product.price}</td>
-                                                <td className="px-6 py-5">
-                                                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }}
-                                                            className="p-2 hover:bg-primary-50 text-primary-600 rounded-lg transition-all"
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteProduct(product._id)}
-                                                            className="p-2 hover:bg-rose-50 text-rose-600 rounded-lg transition-all"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                            <>
+                                {/* Desktop Tablet View */}
+                                <div className="hidden md:block overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="bg-slate-50/50 border-b border-slate-100">
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product</th>
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Price</th>
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Order ID</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Customer</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product Details</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {orders.map((order) => (
-                                            <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-6 py-5 font-bold text-primary-600 text-sm">{order.orderId}</td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-slate-800 text-sm">{order.customerName}</span>
-                                                        <span className="text-[10px] text-slate-400">{order.mobile}</span>
-                                                    </div>
-                                                </td>
-                                                {/* <td className="px-6 py-5 text-sm text-slate-600">
-                                                    {order.items && order.items.length > 0 ? (
-                                                        <div className="space-y-1">
-                                                            {order.items.map((item, idx) => (
-                                                                <div key={idx} className="flex flex-col">
-                                                                    <span className="font-bold text-slate-800">{item.productName || item.productId?.name}</span>
-                                                                    <span className="text-[10px] text-slate-400">{item.size} | {item.material} | Qty: {item.quantity}</span>
-                                                                </div>
-                                                            ))}
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {products.map((product) => (
+                                                <tr key={product._id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden">
+                                                                {product.images?.[0] && (
+                                                                    <img
+                                                                        src={getImageUrl(product.images[0])}
+                                                                        className="w-full h-full object-cover"
+                                                                        alt={product.name}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-slate-800 text-sm">{product.name}</span>
+                                                                <span className="text-[10px] text-slate-400 truncate w-48">{product.description}</span>
+                                                            </div>
                                                         </div>
-                                                    ) : (
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-slate-800">{order.productId?.name || 'Deleted Product'}</span>
-                                                            <span className="text-[10px] text-slate-400">{order.productDetails?.size} | {order.productDetails?.material}</span>
+                                                    </td>
+                                                    <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{product.price}</td>
+                                                    <td className="px-6 py-5">
+                                                        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }}
+                                                                className="p-2 hover:bg-primary-50 text-primary-600 rounded-lg transition-all"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteProduct(product._id)}
+                                                                className="p-2 hover:bg-rose-50 text-rose-600 rounded-lg transition-all"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
                                                         </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile List View */}
+                                <div className="md:hidden divide-y divide-slate-100">
+                                    {products.map((product) => (
+                                        <div key={product._id} className="p-4 space-y-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
+                                                    {product.images?.[0] && (
+                                                        <img
+                                                            src={getImageUrl(product.images[0])}
+                                                            className="w-full h-full object-cover"
+                                                            alt={product.name}
+                                                        />
                                                     )}
-                                                </td> */}
-                                                <td className="px-6 py-5">
+                                                </div>
+                                                <div className="flex-grow min-w-0">
+                                                    <h4 className="font-bold text-slate-900 truncate">{product.name}</h4>
+                                                    <p className="text-xs text-primary-600 font-bold">₹{product.price}</p>
+                                                    <p className="text-[10px] text-slate-400 line-clamp-1">{product.description}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center bg-slate-50/50 p-2 rounded-xl">
+                                                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider text-center">Active</span>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }}
+                                                        className="p-3 bg-white border border-slate-200 text-slate-600 rounded-xl transition-all shadow-sm active:scale-95"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteProduct(product._id)}
+                                                        className="p-3 bg-white border border-slate-200 text-rose-500 rounded-xl transition-all shadow-sm active:scale-95"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Desktop/Tablet Table */}
+                                <div className="hidden md:block overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="bg-slate-50/50 border-b border-slate-100">
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Order ID</th>
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {orders.map((order) => (
+                                                <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-6 py-5 font-bold text-primary-600 text-sm">{order.orderId}</td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-slate-800 text-sm">{order.customerName}</span>
+                                                            <span className="text-[10px] text-slate-400">{order.mobile}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <select
+                                                            value={order.status}
+                                                            onChange={(e) => handleStatusChange(order._id, e.target.value)}
+                                                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider outline-none cursor-pointer ${getStatusColor(order.status)}`}
+                                                        >
+                                                            {['Received', 'In Design', 'Printing', 'Ready', 'Delivered', 'Cancelled'].map(s => (
+                                                                <option key={s} value={s}>{s}</option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+                                                    <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => { setSelectedOrder(order); setIsOrderModalOpen(true); }}
+                                                                className="px-4 py-2 bg-primary-50 text-primary-600 rounded-xl text-xs font-bold hover:bg-primary-100 transition-all flex items-center gap-2"
+                                                            >
+                                                                <Eye size={14} /> View Product Details
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {orders.length === 0 && (
+                                                <tr><td colSpan="6" className="p-10 text-center text-slate-400">No orders found.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Card List */}
+                                <div className="md:hidden divide-y divide-slate-100">
+                                    {orders.map((order) => (
+                                        <div key={order._id} className="p-4 space-y-4">
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-bold text-primary-600">#{order.orderId}</p>
+                                                    <h4 className="font-bold text-slate-900">{order.customerName}</h4>
+                                                    <p className="text-[10px] text-slate-400">{order.mobile}</p>
+                                                </div>
+                                                <p className="font-black text-slate-900">₹{order.totalPrice?.toFixed(2)}</p>
+                                            </div>
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-slate-500 text-xs font-bold">Status:</span>
                                                     <select
                                                         value={order.status}
                                                         onChange={(e) => handleStatusChange(order._id, e.target.value)}
@@ -646,33 +765,21 @@ const AdminDashboard = () => {
                                                             <option key={s} value={s}>{s}</option>
                                                         ))}
                                                     </select>
-                                                </td>
-                                                <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => { setSelectedOrder(order); setIsOrderModalOpen(true); }}
-                                                            className="px-4 py-2 bg-primary-50 text-primary-600 rounded-xl text-xs font-bold hover:bg-primary-100 transition-all flex items-center gap-2"
-                                                        >
-                                                            <Eye size={14} /> View Product Details
-                                                        </button>
-                                                        {/* <button
-                                                            onClick={() => handleDeleteOrder(order._id)}
-                                                            className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all"
-                                                            title="Delete Order"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button> */}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {orders.length === 0 && (
-                                            <tr><td colSpan="6" className="p-10 text-center text-slate-400">No orders found.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => { setSelectedOrder(order); setIsOrderModalOpen(true); }}
+                                                    className="w-full py-3 bg-primary-50 text-primary-600 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                                >
+                                                    <Eye size={14} /> View Order Details
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {orders.length === 0 && (
+                                        <div className="p-10 text-center text-slate-400">No orders found.</div>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
