@@ -13,26 +13,32 @@ exports.initiatePhonePePayment = async (req, res) => {
             customerName,
             mobile,
             address,
-            productId,
-            productDetails,
+            email,
+            items: itemsJson,
             amount
         } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ success: false, error: 'Please upload an image' });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, error: 'Please upload images' });
         }
 
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ success: false, error: 'Product not found' });
-        }
+        const items = typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson;
 
-        // Parse product details if it's a string
-        const parsedProductDetails = typeof productDetails === 'string' ? JSON.parse(productDetails) : productDetails;
+        if (!items || items.length === 0) {
+            return res.status(400).json({ success: false, error: 'No items in order' });
+        }
 
         // Generate unique Order ID and Transaction ID
         const orderId = `FF-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
         const merchantTransactionId = `MT-${Date.now()}`;
+
+        // Process items
+        const processedItems = items.map((item, index) => {
+            return {
+                ...item,
+                uploadedImage: req.files[index].path
+            };
+        });
 
         // Create Pending Order in DB
         const order = await Order.create({
@@ -40,14 +46,13 @@ exports.initiatePhonePePayment = async (req, res) => {
             customerName,
             mobile,
             address,
-            productId,
-            productDetails: parsedProductDetails,
-            uploadedImage: req.file.path,
+            email,
+            items: processedItems,
             totalPrice: amount,
             paymentStatus: 'Pending',
             paymentMethod: 'Prepaid',
-            status: 'Received', // Or 'Pending Payment' if you add that status
-            razorpayOrderId: merchantTransactionId // Reusing field or we can add new one
+            status: 'Received',
+            razorpayOrderId: merchantTransactionId // Reusing field for merchantTransactionId
         });
 
         // PhonePe Payload

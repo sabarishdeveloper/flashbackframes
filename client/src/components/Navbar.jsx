@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ShoppingCart, User, Search } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 
 const Navbar = () => {
+    const { getCartCount } = useCart();
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const location = useLocation();
@@ -56,11 +58,13 @@ const Navbar = () => {
                     <button className="p-2 text-slate-600 hover:text-primary-600 transition-colors">
                         <Search size={20} />
                     </button>
-                    <Link to="/checkout" className="p-2 text-slate-600 hover:text-primary-600 transition-colors relative">
+                    <Link to="/cart" className="p-2 text-slate-600 hover:text-primary-600 transition-colors relative">
                         <ShoppingCart size={20} />
-                        <span className="absolute top-0 right-0 w-4 h-4 bg-accent-500 text-white text-[10px] flex items-center justify-center rounded-full">
-                            0
-                        </span>
+                        {getCartCount() > 0 && (
+                            <span className="absolute top-0 right-0 w-4 h-4 bg-accent-500 text-white text-[10px] flex items-center justify-center rounded-full">
+                                {getCartCount()}
+                            </span>
+                        )}
                     </Link>
 
                 </div>
@@ -95,10 +99,9 @@ const Navbar = () => {
                                 </Link>
                             ))}
                             <div className="flex justify-between items-center py-4">
-                                <Link to="/checkout" onClick={() => setIsOpen(false)} className="flex items-center gap-2 text-slate-800">
-                                    <ShoppingCart size={20} /> Cart
+                                <Link to="/cart" onClick={() => setIsOpen(false)} className="flex items-center gap-2 text-slate-800">
+                                    <ShoppingCart size={20} /> Cart ({getCartCount()})
                                 </Link>
-
                             </div>
                         </div>
                     </motion.div>

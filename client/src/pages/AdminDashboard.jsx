@@ -15,7 +15,9 @@ const AdminDashboard = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [selectedOrder, setSelectedOrder] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -304,6 +306,138 @@ const AdminDashboard = () => {
         </div>
     );
 
+    const OrderDetailsModal = () => {
+        if (!selectedOrder) return null;
+
+        return (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden max-h-[90vh] flex flex-col"
+                >
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div>
+                            <h3 className="text-xl font-display font-bold text-slate-900">
+                                Order Details #{selectedOrder.orderId}
+                            </h3>
+                            <p className="text-xs text-slate-500">Placed on {new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                        </div>
+                        <button
+                            onClick={() => { setIsOrderModalOpen(false); setSelectedOrder(null); }}
+                            className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-900 transition-all"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    <div className="p-8 overflow-y-auto space-y-8">
+                        {/* Customer & Order Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Customer</label>
+                                <p className="font-bold text-slate-900">{selectedOrder.customerName}</p>
+                                <p className="text-sm text-slate-500">{selectedOrder.mobile}</p>
+                                <p className="text-sm text-slate-500">{selectedOrder.email}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Shipping Address</label>
+                                <p className="text-sm text-slate-600 leading-relaxed">{selectedOrder.address}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment & Status</label>
+                                <div className="flex flex-col gap-2">
+                                    <span className="font-bold text-lg text-primary-600">₹{selectedOrder.totalPrice?.toFixed(2)}</span>
+                                    <select
+                                        value={selectedOrder.status}
+                                        onChange={(e) => handleStatusChange(selectedOrder._id, e.target.value)}
+                                        className={`w-fit px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider outline-none cursor-pointer ${getStatusColor(selectedOrder.status)}`}
+                                    >
+                                        {['Received', 'In Design', 'Printing', 'Ready', 'Delivered', 'Cancelled'].map(s => (
+                                            <option key={s} value={s}>{s}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Items List */}
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">Order Items ({selectedOrder.items?.length || 1})</h4>
+                            <div className="grid grid-cols-1 gap-4">
+                                {(selectedOrder.items?.length > 0 ? selectedOrder.items : [{
+                                    productName: selectedOrder.productId?.name,
+                                    size: selectedOrder.productDetails?.size,
+                                    material: selectedOrder.productDetails?.material,
+                                    quantity: selectedOrder.productDetails?.quantity,
+                                    uploadedImage: selectedOrder.uploadedImage
+                                }]).map((item, idx) => (
+                                    <div key={idx} className="flex flex-col md:flex-row gap-6 p-4 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-md transition-all">
+                                        <div className="w-full md:w-32 h-32 rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0">
+                                            <img src={getImageUrl(item.uploadedImage)} className="w-full h-full object-cover" alt="User upload" />
+                                        </div>
+                                        <div className="flex-grow space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <h5 className="font-bold text-slate-800 text-lg">{item.productName || 'Order Product'}</h5>
+                                                <div className="flex gap-2">
+                                                    <a
+                                                        href={getImageUrl(item.uploadedImage)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="btn btn-secondary p-2 rounded-lg"
+                                                        title="View Full Image"
+                                                    >
+                                                        <Eye size={18} />
+                                                    </a>
+                                                    <button
+                                                        onClick={() => handleDownload(getImageUrl(item.uploadedImage), `${selectedOrder.customerName.replace(/\s+/g, '-').toLowerCase()}-${idx + 1}.jpg`)}
+                                                        className="btn btn-primary p-2 rounded-lg"
+                                                        title="Download Photo"
+                                                    >
+                                                        <Download size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4 text-sm">
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Size</span>
+                                                    <span className="font-medium text-slate-700">{item.size}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Material</span>
+                                                    <span className="font-medium text-slate-700">{item.material}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Quantity</span>
+                                                    <span className="font-medium text-slate-700">{item.quantity}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+                        <button
+                            onClick={() => { setIsOrderModalOpen(false); setSelectedOrder(null); }}
+                            className="px-6 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition-all"
+                        >
+                            Close
+                        </button>
+                        <button
+                            onClick={() => handleDeleteOrder(selectedOrder._id)}
+                            className="px-6 py-2 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all flex items-center gap-2"
+                        >
+                            <Trash2 size={16} /> Delete Order
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 flex">
             {/* Sidebar */}
@@ -470,10 +604,9 @@ const AdminDashboard = () => {
                                         <tr className="bg-slate-50/50 border-b border-slate-100">
                                             <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Order ID</th>
                                             <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Customer</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product</th>
                                             <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                                             <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Action</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product Details</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -486,10 +619,23 @@ const AdminDashboard = () => {
                                                         <span className="text-[10px] text-slate-400">{order.mobile}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5 text-sm text-slate-600">
-                                                    {order.productId?.name || 'Deleted Product'}
-                                                    <div className="text-[10px] text-slate-400">{order.productDetails?.size} | {order.productDetails?.material}</div>
-                                                </td>
+                                                {/* <td className="px-6 py-5 text-sm text-slate-600">
+                                                    {order.items && order.items.length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {order.items.map((item, idx) => (
+                                                                <div key={idx} className="flex flex-col">
+                                                                    <span className="font-bold text-slate-800">{item.productName || item.productId?.name}</span>
+                                                                    <span className="text-[10px] text-slate-400">{item.size} | {item.material} | Qty: {item.quantity}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-slate-800">{order.productId?.name || 'Deleted Product'}</span>
+                                                            <span className="text-[10px] text-slate-400">{order.productDetails?.size} | {order.productDetails?.material}</span>
+                                                        </div>
+                                                    )}
+                                                </td> */}
                                                 <td className="px-6 py-5">
                                                     <select
                                                         value={order.status}
@@ -503,30 +649,20 @@ const AdminDashboard = () => {
                                                 </td>
                                                 <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
                                                 <td className="px-6 py-5">
-                                                    <div className="flex gap-2 text-right justify-end">
-                                                        <a
-                                                            href={getImageUrl(order.uploadedImage)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-900 rounded-lg transition-all"
-                                                            title="View Image"
-                                                        >
-                                                            <Eye size={16} />
-                                                        </a>
+                                                    <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => handleDownload(getImageUrl(order.uploadedImage), `${order.customerName.replace(/\s+/g, '-').toLowerCase()}-${order.orderId}.jpg`)}
-                                                            className="p-2 hover:bg-primary-50 text-slate-400 hover:text-primary-600 rounded-lg transition-all"
-                                                            title="Download Image"
+                                                            onClick={() => { setSelectedOrder(order); setIsOrderModalOpen(true); }}
+                                                            className="px-4 py-2 bg-primary-50 text-primary-600 rounded-xl text-xs font-bold hover:bg-primary-100 transition-all flex items-center gap-2"
                                                         >
-                                                            <Download size={16} />
+                                                            <Eye size={14} /> View Product Details
                                                         </button>
-                                                        <button
+                                                        {/* <button
                                                             onClick={() => handleDeleteOrder(order._id)}
                                                             className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all"
                                                             title="Delete Order"
                                                         >
                                                             <Trash2 size={16} />
-                                                        </button>
+                                                        </button> */}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -541,6 +677,7 @@ const AdminDashboard = () => {
                     </div>
                 </div>
                 {isProductModalOpen && <ProductModal />}
+                {isOrderModalOpen && <OrderDetailsModal />}
             </div>
         </div>
     );

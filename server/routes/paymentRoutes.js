@@ -6,10 +6,10 @@ const { uploadOrder } = require('../middleware/upload');
 
 router.post('/create-order', createRazorpayOrder);
 router.post('/verify', verifyPayment);
-router.post('/verify-and-create', uploadOrder.single('image'), verifyAndCreateOrder);
+router.post('/verify-and-create', uploadOrder.array('images'), verifyAndCreateOrder);
 
 // PhonePe Routes
-router.post('/phonepe/initiate', uploadOrder.single('image'), initiatePhonePePayment);
+router.post('/phonepe/initiate', uploadOrder.array('images'), initiatePhonePePayment);
 router.post('/phonepe/callback', phonePeCallback);
 router.get('/phonepe/status/:merchantTransactionId', checkPhonePeStatus);
 

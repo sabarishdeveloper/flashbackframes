@@ -18,22 +18,40 @@ const orderSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please add an address'],
     },
-    productId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
-        required: true,
+    email: {
+        type: String,
     },
-    productDetails: {
+    items: [{
+        productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Product',
+            required: true,
+        },
+        productName: String,
+        productPrice: Number,
         size: String,
         material: String,
         quantity: {
             type: Number,
             default: 1,
+        },
+        uploadedImage: {
+            type: String,
+            required: true
         }
+    }],
+    // Keep these for backward compatibility during migration
+    productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+    },
+    productDetails: {
+        size: String,
+        material: String,
+        quantity: Number
     },
     uploadedImage: {
         type: String,
-        required: [true, 'Please upload an image'],
     },
     status: {
         type: String,

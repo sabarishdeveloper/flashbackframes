@@ -49,8 +49,8 @@ exports.verifyAndCreateOrder = async (req, res) => {
             customerName,
             mobile,
             address,
-            productId,
-            productDetails,
+            email,
+            items: itemsJson,
             paymentMethod
         } = req.body;
 
@@ -69,34 +69,37 @@ exports.verifyAndCreateOrder = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Invalid signature, payment verification failed' });
         }
 
-        // Check if image exists (uploaded via multer)
-        if (!req.file) {
-            return res.status(400).json({ success: false, error: 'Please upload an image' });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, error: 'Please upload images' });
         }
 
-        // Check if product exists
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ success: false, error: 'Product not found' });
+        const items = typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ success: false, error: 'No items in order' });
         }
 
         // Generate unique Order ID
         const orderId = `FF-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
-        // Parse product details if it's a string
-        const parsedProductDetails = typeof productDetails === 'string' ? JSON.parse(productDetails) : productDetails;
-
-        // Calculate total price
-        const totalPrice = product.price * (parsedProductDetails?.quantity || 1);
+        // Process items and calculate total
+        let totalPrice = 0;
+        const processedItems = items.map((item, index) => {
+            const itemTotal = item.productPrice * item.quantity;
+            totalPrice += itemTotal;
+            return {
+                ...item,
+                uploadedImage: req.files[index].path
+            };
+        });
 
         const order = await Order.create({
             orderId,
             customerName,
             mobile,
             address,
-            productId,
-            productDetails: parsedProductDetails,
-            uploadedImage: req.file.path,
+            email,
+            items: processedItems,
             totalPrice,
             paymentStatus: 'Paid',
             paymentMethod: paymentMethod || 'Prepaid',

@@ -143,14 +143,27 @@ const OrderTracking = () => {
                             <div className="card-premium p-8 grid grid-cols-1 md:grid-cols-2 gap-10 text">
                                 <div className="space-y-4">
                                     <h4 className="font-bold text-slate-900 border-b border-slate-100 pb-2">Order Summary</h4>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-500">
-                                            {order.productDetails?.quantity}x {order.productId?.name} ({order.productDetails?.size}, {order.productDetails?.material})
-                                        </span>
-                                        <span className="font-bold text-slate-800">₹{order.totalPrice?.toFixed(2)}</span>
+                                    <div className="space-y-3">
+                                        {order.items && order.items.length > 0 ? (
+                                            order.items.map((item, idx) => (
+                                                <div key={idx} className="flex justify-between text-sm">
+                                                    <span className="text-slate-500">
+                                                        {item.quantity}x {item.productName || item.productId?.name} ({item.size}, {item.material})
+                                                    </span>
+                                                    <span className="font-bold text-slate-800">₹{(item.productPrice * item.quantity).toFixed(2)}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-slate-500">
+                                                    {order.productDetails?.quantity}x {order.productId?.name || 'Product'} ({order.productDetails?.size}, {order.productDetails?.material})
+                                                </span>
+                                                <span className="font-bold text-slate-800">₹{order.totalPrice?.toFixed(2)}</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="pt-2 flex justify-between font-bold text-slate-900 text-lg">
-                                        <span>Total Paid</span>
+                                    <div className="pt-2 flex justify-between font-bold text-slate-900 text-lg border-t border-slate-50 mt-4">
+                                        <span>Total Amount</span>
                                         <span>₹{order.totalPrice?.toFixed(2)}</span>
                                     </div>
                                 </div>

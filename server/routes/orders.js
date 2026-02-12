@@ -11,7 +11,7 @@ const { uploadOrder } = require('../middleware/upload');
 
 const router = express.Router();
 
-router.post('/', uploadOrder.single('image'), createOrder);
+router.post('/', uploadOrder.array('images'), createOrder);
 router.get('/track/:identifier', trackOrder);
 
 router.get('/', protect, authorize('admin'), getOrders);

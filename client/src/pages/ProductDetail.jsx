@@ -4,16 +4,15 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, Plus, Minus, ShoppingCart, Share2, Upload, Check, Loader2 } from 'lucide-react';
 import { productAPI } from '../services/apiService';
 import { toast } from 'sonner';
+import { useCart } from '../context/CartContext';
 
 const ProductDetail = () => {
+    const { addToCart } = useCart();
     const { id } = useParams();
     const navigate = useNavigate();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [quantity, setQuantity] = useState(1);
-    const [selectedSize, setSelectedSize] = useState('');
-    const [selectedMaterial, setSelectedMaterial] = useState('');
-    const [uploadedFile, setUploadedFile] = useState(null);
+    const [queuedItems, setQueuedItems] = useState([]);
     const [activeImage, setActiveImage] = useState('');
     const fileInputRef = useRef(null);
 
@@ -23,8 +22,6 @@ const ProductDetail = () => {
                 const response = await productAPI.getById(id);
                 const data = response.data.data;
                 setProduct(data);
-                setSelectedSize(data.options.sizes[0] || '');
-                setSelectedMaterial(data.options.materials[0] || '');
 
                 const initialImg = data.images && data.images.length > 0
                     ? getImageUrl(data.images[0])
@@ -47,38 +44,58 @@ const ProductDetail = () => {
     };
 
     const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            if (file.size > 10 * 1024 * 1024) {
-                toast.error('File size exceeds 10MB limit');
-                return;
-            }
-            setUploadedFile(file);
-            toast.success('Photo uploaded successfully');
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+            const newItems = files.map(file => {
+                if (file.size > 10 * 1024 * 1024) {
+                    toast.error(`File ${file.name} exceeds 10MB limit`);
+                    return null;
+                }
+                return {
+                    id: Math.random().toString(36).substr(2, 9),
+                    file,
+                    size: product.options.sizes[0] || '',
+                    material: product.options.materials[0] || '',
+                    quantity: 1
+                };
+            }).filter(item => item !== null);
+
+            setQueuedItems(prev => [...prev, ...newItems]);
+            toast.success(`${newItems.length} photo(s) added successfully`);
         }
     };
 
-    const handleOrderNow = () => {
-        if (!uploadedFile) {
-            toast.error('Please upload a photo for your frame');
+    const updateQueuedItem = (id, updates) => {
+        setQueuedItems(prev => prev.map(item =>
+            item.id === id ? { ...item, ...updates } : item
+        ));
+    };
+
+    const removeQueuedItem = (id) => {
+        setQueuedItems(prev => prev.filter(item => item.id !== id));
+    };
+
+    const handleAddToCart = (isBuyNow = false) => {
+        if (queuedItems.length === 0) {
+            toast.error('Please upload at least one photo');
             fileInputRef.current.scrollIntoView({ behavior: 'smooth' });
             return;
         }
 
-        // Save order details to temporary state/localStorage for checkout
-        const orderData = {
-            productId: product._id,
-            productName: product.name,
-            productPrice: product.price,
-            quantity,
-            size: selectedSize,
-            material: selectedMaterial,
-            // We can't easily save the File object to localStorage, so we'll pass via state or ref
-        };
+        queuedItems.forEach(item => {
+            addToCart(product, {
+                size: item.size,
+                material: item.material,
+                quantity: item.quantity
+            }, item.file);
+        });
 
-        // In a real app with global state, we'd use Redux/Context. 
-        // For this simple version, let's pass state via navigate
-        navigate('/checkout', { state: { orderDetails: orderData, file: uploadedFile } });
+        toast.success(`${queuedItems.length} item(s) added to cart!`);
+        setQueuedItems([]); // Clear queue after adding
+
+        if (isBuyNow) {
+            navigate('/cart');
+        }
     };
 
     if (loading) {
@@ -150,86 +167,111 @@ const ProductDetail = () => {
                         </div>
 
                         <div className="space-y-6">
-                            {/* Size Selection */}
-                            {product.options.sizes && product.options.sizes.length > 0 && (
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">Select Size</h3>
-                                    <div className="flex flex-wrap gap-3">
-                                        {product.options.sizes.map((size) => (
-                                            <button
-                                                key={size}
-                                                onClick={() => setSelectedSize(size)}
-                                                className={`px-6 py-3 rounded-xl text-sm font-bold transition-all border-2 ${selectedSize === size
-                                                    ? 'border-primary-600 bg-primary-50 text-primary-700 shadow-sm'
-                                                    : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'
-                                                    }`}
-                                            >
-                                                {size}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Material Selection */}
-                            {product.options.materials && product.options.materials.length > 0 && (
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">Frame Material</h3>
-                                    <div className="flex flex-wrap gap-3">
-                                        {product.options.materials.map((mat) => (
-                                            <button
-                                                key={mat}
-                                                onClick={() => setSelectedMaterial(mat)}
-                                                className={`px-6 py-3 rounded-xl text-sm font-bold transition-all border-2 ${selectedMaterial === mat
-                                                    ? 'border-primary-600 bg-primary-50 text-primary-700 shadow-sm'
-                                                    : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'
-                                                    }`}
-                                            >
-                                                {mat}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Photo Upload */}
-                            <div ref={fileInputRef} className="p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
+                            {/* Unified Photo Upload Box */}
+                            <div ref={fileInputRef} className="p-8 rounded-3xl bg-slate-50 border-2 border-dashed border-slate-200 hover:border-primary-400 transition-all group">
                                 <div className="flex flex-col items-center text-center">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors ${uploadedFile ? 'bg-green-100 text-green-600' : 'bg-primary-100 text-primary-600'}`}>
-                                        {uploadedFile ? <Check size={24} /> : <Upload size={24} />}
+                                    <div className="w-16 h-16 rounded-2xl bg-primary-100 text-primary-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <Upload size={32} />
                                     </div>
-                                    <h4 className="font-bold text-slate-800 mb-1">
-                                        {uploadedFile ? 'Photo Selected!' : 'Step 3: Upload Your Photo'}
-                                    </h4>
-                                    <p className="text-sm text-slate-500 mb-4">{uploadedFile ? uploadedFile.name : 'Drag and drop or click to browse (Max 10MB)'}</p>
-                                    <label className={`btn py-2 px-6 text-sm cursor-pointer ${uploadedFile ? 'btn-secondary border-green-200 text-green-700' : 'btn-primary'}`}>
-                                        {uploadedFile ? 'Change Photo' : 'Upload Photo'}
-                                        <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                                    <h4 className="text-xl font-bold text-slate-900 mb-2">Upload Your Photos</h4>
+                                    <p className="text-slate-500 mb-6 max-w-sm">Select one or more photos to frame. You can customize size and material for each after uploading.</p>
+                                    <label className="btn btn-primary px-8 py-3 cursor-pointer">
+                                        Choose Photos
+                                        <input type="file" className="hidden" accept="image/*" multiple onChange={handleFileUpload} />
                                     </label>
+                                    <p className="text-xs text-slate-400 mt-4 uppercase tracking-widest font-bold">Max 10MB per image</p>
                                 </div>
                             </div>
 
-                            {/* Quantity and CTA */}
-                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                <div className="flex items-center bg-slate-100 rounded-xl p-1 w-fit">
-                                    <button
-                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white transition-colors"
-                                    >
-                                        <Minus size={18} />
-                                    </button>
-                                    <span className="w-12 text-center font-bold text-lg">{quantity}</span>
-                                    <button
-                                        onClick={() => setQuantity(quantity + 1)}
-                                        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white transition-colors"
-                                    >
-                                        <Plus size={18} />
-                                    </button>
-                                </div>
+                            {/* Configuration Queue */}
+                            {queuedItems.length > 0 && (
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                            Customizing {queuedItems.length} Photo(s)
+                                        </h3>
+                                        <button onClick={() => setQueuedItems([])} className="text-sm font-bold text-rose-500 hover:text-rose-600">Clear All</button>
+                                    </div>
 
-                                <button onClick={handleOrderNow} className="btn btn-primary flex-grow text-lg py-4">
+                                    <div className="space-y-4">
+                                        {queuedItems.map((item) => (
+                                            <motion.div
+                                                layout
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                key={item.id}
+                                                className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4"
+                                            >
+                                                <div className="flex gap-4">
+                                                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+                                                        <img src={URL.createObjectURL(item.file)} alt="Preview" className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className="flex-grow min-w-0">
+                                                        <div className="flex justify-between items-start">
+                                                            <h5 className="font-bold text-slate-800 text-sm truncate pr-4">{item.file.name}</h5>
+                                                            <button onClick={() => removeQueuedItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-1">
+                                                                <Minus size={16} />
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2 mt-2">
+                                                            <div className="flex items-center bg-slate-50 rounded-lg p-1">
+                                                                <button
+                                                                    onClick={() => updateQueuedItem(item.id, { quantity: Math.max(1, item.quantity - 1) })}
+                                                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-white"
+                                                                >
+                                                                    <Minus size={12} />
+                                                                </button>
+                                                                <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
+                                                                <button
+                                                                    onClick={() => updateQueuedItem(item.id, { quantity: item.quantity + 1 })}
+                                                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-white"
+                                                                >
+                                                                    <Plus size={12} />
+                                                                </button>
+                                                            </div>
+                                                            <span className="text-xs text-slate-400 flex items-center">Size & Material options below</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Size</p>
+                                                        <select
+                                                            value={item.size}
+                                                            onChange={(e) => updateQueuedItem(item.id, { size: e.target.value })}
+                                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-primary-500"
+                                                        >
+                                                            {product.options.sizes.map(s => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Material</p>
+                                                        <select
+                                                            value={item.material}
+                                                            onChange={(e) => updateQueuedItem(item.id, { material: e.target.value })}
+                                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-primary-500"
+                                                        >
+                                                            {product.options.materials.map(m => <option key={m} value={m}>{m}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Global Action Buttons */}
+                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                                <button onClick={() => handleAddToCart(false)} className="btn btn-secondary flex-grow text-lg py-4 border-2 border-primary-100">
+                                    <Plus size={20} className="mr-2" />
+                                    Add All to Cart
+                                </button>
+
+                                <button onClick={() => handleAddToCart(true)} className="btn btn-primary flex-grow text-lg py-4">
                                     <ShoppingCart size={20} className="mr-2" />
-                                    Order Now
+                                    Buy Now
                                 </button>
 
                                 <button className="btn btn-secondary p-4 w-14">

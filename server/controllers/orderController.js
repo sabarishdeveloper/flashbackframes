@@ -8,32 +8,43 @@ const { cloudinary } = require('../middleware/upload');
 // @access  Public
 exports.createOrder = async (req, res) => {
     try {
-        const { customerName, mobile, address, productId, productDetails, paymentMethod, uploadedImage: bodyImage } = req.body;
+        const { customerName, mobile, address, email, paymentMethod, items: itemsJson } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ success: false, error: 'Please upload an image' });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, error: 'Please upload images for all items' });
         }
 
-        // Check if product exists
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ success: false, error: 'Product not found' });
+        const items = typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ success: false, error: 'No items in order' });
+        }
+
+        if (req.files.length !== items.length) {
+            return res.status(400).json({ success: false, error: `Expected ${items.length} images, but got ${req.files.length}` });
         }
 
         // Generate unique Order ID
         const orderId = `FF-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
-        // Calculate total price (simplified)
-        const totalPrice = product.price * (productDetails?.quantity || 1);
+        // Process items and calculate total
+        let totalPrice = 0;
+        const processedItems = items.map((item, index) => {
+            const itemTotal = item.productPrice * item.quantity;
+            totalPrice += itemTotal;
+            return {
+                ...item,
+                uploadedImage: req.files[index].path
+            };
+        });
 
         const order = await Order.create({
             orderId,
             customerName,
             mobile,
             address,
-            productId,
-            productDetails: typeof productDetails === 'string' ? JSON.parse(productDetails) : productDetails,
-            uploadedImage: req.file.path,
+            email,
+            items: processedItems,
             totalPrice,
             paymentMethod: paymentMethod || 'Prepaid',
             status: 'Received'
@@ -41,13 +52,13 @@ exports.createOrder = async (req, res) => {
 
         res.status(201).json({ success: true, data: order });
     } catch (error) {
+        console.error('Create Order Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
 
-// @desc    Get order by ID or Mobile
-// @route   GET /api/orders/track/:identifier
-// @access  Public
+// ... existing code ...
+
 exports.trackOrder = async (req, res) => {
     try {
         const { identifier } = req.params;
@@ -58,7 +69,7 @@ exports.trackOrder = async (req, res) => {
                 { orderId: identifier },
                 { mobile: identifier }
             ]
-        }).populate('productId', 'name images');
+        }).populate('items.productId', 'name images');
 
         if (!order) {
             return res.status(404).json({ success: false, error: 'Order not found' });
@@ -119,8 +130,17 @@ exports.deleteOrder = async (req, res) => {
         if (!order) {
             return res.status(404).json({ success: false, error: 'Order not found' });
         }
-        // Delete image from cloudinary
-        if (order.uploadedImage) {
+        if (order.items && order.items.length > 0) {
+            for (const item of order.items) {
+                if (item.uploadedImage) {
+                    const urlParts = item.uploadedImage.split('/');
+                    const fileName = urlParts[urlParts.length - 1].split('.')[0];
+                    const publicId = `flashback_frames/orders/${fileName}`;
+                    await cloudinary.uploader.destroy(publicId);
+                }
+            }
+        } else if (order.uploadedImage) {
+            // Backward compatibility
             const urlParts = order.uploadedImage.split('/');
             const fileName = urlParts[urlParts.length - 1].split('.')[0];
             const publicId = `flashback_frames/orders/${fileName}`;
@@ -130,6 +150,7 @@ exports.deleteOrder = async (req, res) => {
         await order.deleteOne();
         res.status(200).json({ success: true, data: {} });
     } catch (error) {
+        console.error('Delete Order Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };

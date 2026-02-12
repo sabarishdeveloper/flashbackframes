@@ -4,13 +4,22 @@ import { ShoppingBag, ChevronRight, CreditCard, Truck, CheckCircle2, Loader2, Al
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { orderAPI, paymentAPI } from '../services/apiService';
 import { loadRazorpayScript } from '../utils/loadRazorpay';
+import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
 
 const Checkout = () => {
+    const { cartItems, getCartTotal, clearCart } = useCart();
     const location = useLocation();
     const navigate = useNavigate();
-    const orderDetails = location.state?.orderDetails;
-    const uploadedFile = location.state?.file;
+
+    // We can still support direct checkouts if needed, but primary is cartItems
+    const directOrder = location.state?.orderDetails;
+    const directFile = location.state?.file;
+
+    const items = directOrder ? [{
+        ...directOrder,
+        imageFile: directFile
+    }] : cartItems;
 
     const [formData, setFormData] = useState({
         customerName: '',
@@ -49,27 +58,37 @@ const Checkout = () => {
             handler: async function (response) {
                 setLoading(true);
                 try {
-                    // Combine payment details with order form data
                     const finalData = new FormData();
                     finalData.append('razorpay_order_id', response.razorpay_order_id);
                     finalData.append('razorpay_payment_id', response.razorpay_payment_id);
                     finalData.append('razorpay_signature', response.razorpay_signature);
 
-                    // Append all order details
                     finalData.append('customerName', orderData.customerName);
                     finalData.append('mobile', orderData.mobile);
                     finalData.append('email', orderData.email);
                     finalData.append('address', orderData.address);
-                    finalData.append('productId', orderData.productId);
-                    finalData.append('image', uploadedFile);
                     finalData.append('paymentMethod', 'Prepaid');
-                    finalData.append('productDetails', JSON.stringify(orderData.productDetails));
+
+                    const itemsToSubmit = items.map(item => ({
+                        productId: item.productId,
+                        productName: item.name,
+                        productPrice: item.price,
+                        size: item.size,
+                        material: item.material,
+                        quantity: item.quantity
+                    }));
+                    finalData.append('items', JSON.stringify(itemsToSubmit));
+
+                    items.forEach(item => {
+                        finalData.append('images', item.imageFile);
+                    });
 
                     const verifyRes = await paymentAPI.verifyAndCreate(finalData);
 
                     if (verifyRes.data.success) {
                         setOrderResponse(verifyRes.data.data);
                         setIsSubmitted(true);
+                        clearCart();
                         toast.success('Payment successful and order placed!');
                     } else {
                         toast.error(verifyRes.data.error || 'Payment verification failed');
@@ -109,12 +128,12 @@ const Checkout = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!orderDetails || !uploadedFile) {
+        if (items.length === 0) {
             toast.error('No item in cart');
             return;
         }
 
-        const subtotal = orderDetails.productPrice * orderDetails.quantity;
+        const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
         const tax = subtotal * 0.08;
         const totalAmount = subtotal + tax;
 
@@ -123,56 +142,51 @@ const Checkout = () => {
             mobile: formData.mobile,
             email: formData.email,
             address: `${formData.address}, ${formData.city}, ${formData.state} - ${formData.zip}`,
-            productId: orderDetails.productId,
-            productDetails: {
-                size: orderDetails.size,
-                material: orderDetails.material,
-                quantity: orderDetails.quantity
-            }
         };
 
         setLoading(true);
         try {
-            if (paymentMethod === 'COD') {
-                // For COD, create order directly
-                const data = new FormData();
-                data.append('customerName', orderData.customerName);
-                data.append('mobile', orderData.mobile);
-                data.append('address', orderData.address);
-                data.append('productId', orderData.productId);
-                data.append('image', uploadedFile);
-                data.append('paymentMethod', 'COD');
-                data.append('productDetails', JSON.stringify(orderData.productDetails));
+            const data = new FormData();
+            data.append('customerName', orderData.customerName);
+            data.append('mobile', orderData.mobile);
+            data.append('email', orderData.email);
+            data.append('address', orderData.address);
 
+            const itemsToSubmit = items.map(item => ({
+                productId: item.productId,
+                productName: item.name,
+                productPrice: item.price,
+                size: item.size,
+                material: item.material,
+                quantity: item.quantity
+            }));
+            data.append('items', JSON.stringify(itemsToSubmit));
+
+            items.forEach(item => {
+                data.append('images', item.imageFile);
+            });
+
+            if (paymentMethod === 'COD') {
+                data.append('paymentMethod', 'COD');
                 const orderCreateRes = await orderAPI.create(data);
                 if (orderCreateRes.data.success) {
                     setOrderResponse(orderCreateRes.data.data);
                     setIsSubmitted(true);
+                    clearCart();
                     toast.success('Order placed successfully (COD)!');
                 }
             } else if (paymentMethod === 'PhonePe') {
-                // For PhonePe, initiate payment on backend
-                const formDataToSubmit = new FormData();
-                formDataToSubmit.append('customerName', orderData.customerName);
-                formDataToSubmit.append('mobile', orderData.mobile);
-                formDataToSubmit.append('email', orderData.email);
-                formDataToSubmit.append('address', orderData.address);
-                formDataToSubmit.append('productId', orderData.productId);
-                formDataToSubmit.append('image', uploadedFile);
-                formDataToSubmit.append('amount', totalAmount);
-                formDataToSubmit.append('productDetails', JSON.stringify(orderData.productDetails));
-
-                const phonepeRes = await paymentAPI.phonePeInitiate(formDataToSubmit);
+                data.append('amount', totalAmount);
+                const phonepeRes = await paymentAPI.phonePeInitiate(data);
                 if (phonepeRes.data.success) {
-                    // Redirect to PhonePe payment page
+                    // Note: PhonePe callback will need to handle multiple items too, which we updated in controller
                     window.location.href = phonepeRes.data.redirectUrl;
                 } else {
                     toast.error(phonepeRes.data.error || 'PhonePe initiation failed');
                 }
             } else {
-                // For Prepaid, create Razorpay order first
+                // Razorpay
                 const rzpOrderRes = await paymentAPI.createOrder(totalAmount);
-
                 if (rzpOrderRes.data.success) {
                     await handlePayment(
                         rzpOrderRes.data.order.id,
@@ -181,7 +195,6 @@ const Checkout = () => {
                     );
                 }
             }
-
         } catch (error) {
             console.error('Checkout error:', error);
             toast.error(error.response?.data?.error || 'Failed to place order');
@@ -189,7 +202,7 @@ const Checkout = () => {
         }
     };
 
-    if (!orderDetails && !isSubmitted) {
+    if (items.length === 0 && !isSubmitted) {
         return (
             <div className="py-24 text-center">
                 <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
@@ -231,7 +244,7 @@ const Checkout = () => {
         );
     }
 
-    const subtotal = orderDetails.productPrice * orderDetails.quantity;
+    const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const tax = subtotal * 0.08;
     const total = subtotal + tax;
 
@@ -239,7 +252,7 @@ const Checkout = () => {
         <div className="py-20 min-h-screen bg-slate-50">
             <div className="container mx-auto px-4 md:px-6">
                 <div className="flex items-center gap-2 mb-8 text-sm text-slate-500 font-medium">
-                    <Link to="/products" className="hover:text-primary-600">Product</Link>
+                    <Link to="/cart" className="hover:text-primary-600">Cart</Link>
                     <ChevronRight size={14} />
                     <span className="text-slate-900 font-bold">Checkout</span>
                 </div>
@@ -340,7 +353,6 @@ const Checkout = () => {
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
-                                                {/* Simplified icons or text */}
                                                 <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">UPI</span>
                                                 <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">CARD</span>
                                             </div>
@@ -403,29 +415,31 @@ const Checkout = () => {
                                 <ShoppingBag className="text-primary-600" />
                                 Order Summary
                             </h2>
-                            <div className="space-y-4 mb-6">
-                                <div className="flex gap-4">
-                                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
-                                        <img src={URL.createObjectURL(uploadedFile)} alt="Preview" className="w-full h-full object-cover" />
+                            <div className="space-y-6 mb-6 max-h-[400px] overflow-y-auto pr-2">
+                                {items.map((item, idx) => (
+                                    <div key={idx} className="flex gap-4 border-b border-slate-50 pb-4 last:border-0 last:pb-0">
+                                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                                            {item.imageFile && <img src={URL.createObjectURL(item.imageFile)} alt="Preview" className="w-full h-full object-cover" />}
+                                        </div>
+                                        <div className="flex-grow">
+                                            <h4 className="font-bold text-slate-800 text-sm leading-tight">{item.name}</h4>
+                                            <p className="text-[10px] text-slate-500 mt-0.5">{item.size} | {item.material} | Qty: {item.quantity}</p>
+                                            <p className="font-bold text-primary-600 text-sm mt-1">₹{(item.price * item.quantity).toFixed(2)}</p>
+                                        </div>
                                     </div>
-                                    <div className="flex-grow">
-                                        <h4 className="font-bold text-slate-800 leading-tight">{orderDetails.productName}</h4>
-                                        <p className="text-xs text-slate-500">{orderDetails.size} | {orderDetails.material} | Qty: {orderDetails.quantity}</p>
-                                        <p className="font-bold text-primary-600 mt-1">₹{orderDetails.productPrice}</p>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
 
                             <div className="space-y-3 pt-6 border-t border-slate-100">
-                                <div className="flex justify-between text-slate-600">
+                                <div className="flex justify-between text-slate-600 text-sm">
                                     <span>Subtotal</span>
                                     <span>₹{subtotal.toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between text-slate-600">
+                                <div className="flex justify-between text-slate-600 text-sm">
                                     <span>Shipping</span>
-                                    <span className="text-green-600 font-bold">FREE</span>
+                                    <span className="text-green-600 font-bold uppercase text-[10px]">FREE</span>
                                 </div>
-                                <div className="flex justify-between text-slate-600">
+                                <div className="flex justify-between text-slate-600 text-sm">
                                     <span>Estimated Tax</span>
                                     <span>₹{tax.toFixed(2)}</span>
                                 </div>

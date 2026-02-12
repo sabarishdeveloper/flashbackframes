@@ -14,31 +14,37 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import PaymentStatus from './pages/PaymentStatus';
 
+import { CartProvider } from './context/CartContext';
+import Cart from './pages/Cart';
+
 function App() {
   return (
-    <Router>
-      <div className="flex flex-col min-h-screen">
-        <Navbar />
-        <main className="flex-grow pt-16">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/track" element={<OrderTracking />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/payment-status" element={<PaymentStatus />} />
+    <CartProvider>
+      <Router>
+        <div className="flex flex-col min-h-screen">
+          <Navbar />
+          <main className="flex-grow pt-16">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/track" element={<OrderTracking />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/payment-status" element={<PaymentStatus />} />
 
-            {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          </Routes>
-        </main>
-        <Footer />
-        <Toaster position="bottom-right" richColors />
-      </div>
-    </Router>
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            </Routes>
+          </main>
+          <Footer />
+          <Toaster position="bottom-right" richColors />
+        </div>
+      </Router>
+    </CartProvider>
   );
 }
 
