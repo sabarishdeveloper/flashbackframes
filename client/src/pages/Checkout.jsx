@@ -175,15 +175,6 @@ const Checkout = () => {
                     clearCart();
                     toast.success('Order placed successfully (COD)!');
                 }
-            } else if (paymentMethod === 'PhonePe') {
-                data.append('amount', totalAmount);
-                const phonepeRes = await paymentAPI.phonePeInitiate(data);
-                if (phonepeRes.data.success) {
-                    // Note: PhonePe callback will need to handle multiple items too, which we updated in controller
-                    window.location.href = phonepeRes.data.redirectUrl;
-                } else {
-                    toast.error(phonepeRes.data.error || 'PhonePe initiation failed');
-                }
             } else {
                 // Razorpay
                 const rzpOrderRes = await paymentAPI.createOrder(totalAmount);
@@ -358,23 +349,6 @@ const Checkout = () => {
                                             </div>
                                         </div>
 
-                                        <div
-                                            onClick={() => setPaymentMethod('PhonePe')}
-                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${paymentMethod === 'PhonePe' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'}`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'PhonePe' ? 'border-primary-600' : 'border-slate-300'}`}>
-                                                    {paymentMethod === 'PhonePe' && <div className="w-2.5 h-2.5 bg-primary-600 rounded-full" />}
-                                                </div>
-                                                <div>
-                                                    <span className="font-bold block">PhonePe</span>
-                                                    <span className="text-xs">UPI, Cards, QR (Trusted)</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">UPI</span>
-                                            </div>
-                                        </div>
 
                                         <div
                                             onClick={() => setPaymentMethod('COD')}
