@@ -8,7 +8,13 @@ const Footer = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
                     <div className="space-y-4">
                         <Link to="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center text-white font-bold text-lg">F</div>
+                            <div className="w-8 h-8 rounded overflow-hidden">
+                                <img
+                                    src="/logo.png"
+                                    alt="F"
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
                             <span className="text-xl font-display font-bold text-white">Flashback<span className="text-primary-500">Frames</span></span>
                         </Link>
                         <p className="text-slate-400 text-sm leading-relaxed max-w-xs">

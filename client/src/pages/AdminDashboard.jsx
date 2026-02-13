@@ -444,7 +444,13 @@ const AdminDashboard = () => {
         <>
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center text-white font-bold">F</div>
+                    <div className="w-8 h-8 rounded overflow-hidden">
+                        <img
+                            src="/logo.png"
+                            alt="F"
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
                     <span className="font-display font-bold text-slate-900 text-lg">AdminPanel</span>
                 </div>
                 <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 hover:bg-slate-100 rounded-lg">

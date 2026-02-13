@@ -32,9 +32,13 @@ const Navbar = () => {
                     <motion.div
                         initial={{ rotate: -10 }}
                         animate={{ rotate: 0 }}
-                        className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg"
+                        className="w-10 h-10 rounded-lg overflow-hidden shadow-lg"
                     >
-                        F
+                        <img
+                            src="/logo.png"
+                            alt="F"
+                            className="w-full h-full object-cover"
+                        />
                     </motion.div>
                     <span className={`text-xl font-display font-bold ${scrolled ? 'text-slate-900' : 'text-slate-800'}`}>
                         Flashback<span className="text-primary-600">Frames</span>
