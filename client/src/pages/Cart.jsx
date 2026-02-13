@@ -156,11 +156,23 @@ const Cart = () => {
                             </button>
 
                             <div className="mt-6 flex flex-col gap-4">
-                                <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest font-black">Secure Checkout Guarenteed</p>
-                                <div className="flex justify-center gap-4 opacity-30 grayscale">
-                                    <div className="w-10 h-6 bg-slate-400 rounded"></div>
-                                    <div className="w-10 h-6 bg-slate-400 rounded"></div>
-                                    <div className="w-10 h-6 bg-slate-400 rounded"></div>
+                                <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest font-black">Secure Checkout Guaranteed</p>
+                                <div className="flex justify-center items-center gap-4 opacity-70">
+                                    <div className="px-2 py-1 border border-slate-200 rounded-md bg-white shadow-sm flex items-center justify-center">
+                                        <span className="text-[8px] font-black italic text-[#1434CB]">VISA</span>
+                                    </div>
+                                    <div className="px-2 py-1 border border-slate-200 rounded-md bg-white shadow-sm flex items-center justify-center">
+                                        <div className="flex -space-x-1">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-[#EB001B]"></div>
+                                            <div className="w-2.5 h-2.5 rounded-full bg-[#F79E1B] opacity-80"></div>
+                                        </div>
+                                    </div>
+                                    <div className="px-2 py-1 border border-slate-200 rounded-md bg-white shadow-sm flex items-center justify-center">
+                                        <span className="text-[8px] font-black text-[#5C2D91]">UPI</span>
+                                    </div>
+                                    <div className="px-2 py-1 border border-slate-200 rounded-md bg-white shadow-sm flex items-center justify-center">
+                                        <span className="text-[8px] font-black text-slate-800">RuPay</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

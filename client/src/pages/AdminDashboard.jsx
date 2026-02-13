@@ -1,14 +1,332 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users, ShoppingBag, DollarSign, Package,
-    Search, Bell, MoreVertical, Edit2, Trash2,
+    Search, Bell, Edit2, Trash2,
     Download, Filter, Sidebar, Loader2, LogOut, Plus, X, Eye, Menu
 } from 'lucide-react';
 import { orderAPI, productAPI } from '../services/apiService';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+
+const getStatusColor = (status) => {
+    switch (status) {
+        case 'Delivered': return 'bg-emerald-100 text-emerald-700';
+        case 'Printing':
+        case 'In Design': return 'bg-primary-100 text-primary-700';
+        case 'Received': return 'bg-amber-100 text-amber-700';
+        case 'Ready': return 'bg-blue-100 text-blue-700';
+        case 'Cancelled': return 'bg-rose-100 text-rose-700';
+        default: return 'bg-slate-100 text-slate-700';
+    }
+};
+
+const getImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${url}`;
+};
+
+const ProductModal = ({
+    isOpen,
+    onClose,
+    editingProduct,
+    previewImages,
+    setPreviewImages,
+    handleProductSubmit
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+            >
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 className="text-xl font-display font-bold text-slate-900">
+                        {editingProduct ? 'Edit Product' : 'Add New Product'}
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-900 transition-all"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+                <form onSubmit={handleProductSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Product Name</label>
+                            <input
+                                name="name"
+                                defaultValue={editingProduct?.name}
+                                required
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                placeholder="e.g. Classic Wooden Frame"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Category</label>
+                            <select
+                                name="category"
+                                defaultValue={editingProduct?.category}
+                                required
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                            >
+                                <option value="">Select Category</option>
+                                <option value="Photo Frames">Photo Frames</option>
+                                <option value="Canvas Prints">Canvas Prints</option>
+                                <option value="Custom Gifts">Custom Gifts</option>
+                                <option value="Collage Frames">Collage Frames</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Price</label>
+                            <input
+                                name="price"
+                                type="number"
+                                defaultValue={editingProduct?.price}
+                                required
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                placeholder="0.00"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-slate-400">Description</label>
+                        <textarea
+                            name="description"
+                            defaultValue={editingProduct?.description}
+                            rows="3"
+                            required
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                            placeholder="Product details..."
+                        ></textarea>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Sizes (comma separated)</label>
+                            <input
+                                name="sizes_input"
+                                defaultValue={editingProduct?.options?.sizes?.join(', ')}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                placeholder="8x10, 12x15, 20x24"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Materials (comma separated)</label>
+                            <input
+                                name="materials_input"
+                                defaultValue={editingProduct?.options?.materials?.join(', ')}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                placeholder="Wood, Acrylic, Metal"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Upload Photos</label>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-4 mb-2">
+                            {(previewImages.length > 0 ? previewImages : (editingProduct?.images || [])).map((img, idx) => (
+                                <div key={idx} className="aspect-square rounded-xl overflow-hidden border border-slate-200 relative group">
+                                    <img
+                                        src={typeof img === 'string' ? getImageUrl(img) : URL.createObjectURL(img)}
+                                        className="w-full h-full object-cover"
+                                        alt="Preview"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <span className="text-[8px] text-white font-bold uppercase">Image {idx + 1}</span>
+                                    </div>
+                                </div>
+                            ))}
+                            {previewImages.length === 0 && (!editingProduct?.images || editingProduct.images.length === 0) && (
+                                <div className="aspect-square rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
+                                    <Package size={24} />
+                                </div>
+                            )}
+                        </div>
+
+                        <input
+                            name="images"
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => {
+                                const files = Array.from(e.target.files);
+                                setPreviewImages(files);
+                            }}
+                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                        />
+                        {editingProduct && <p className="text-[10px] text-amber-500 italic font-medium">Tip: Uploading new photos will replace all existing ones. Keep empty to maintain current photos.</p>}
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-6 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-8 py-3 rounded-xl text-sm font-bold bg-primary-600 text-white hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all"
+                        >
+                            {editingProduct ? 'Update Product' : 'Create Product'}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </div>
+    );
+};
+
+const OrderDetailsModal = ({
+    isOpen,
+    onClose,
+    selectedOrder,
+    handleStatusChange,
+    handleDeleteOrder,
+    handleDownload,
+    getStatusColor
+}) => {
+    if (!isOpen || !selectedOrder) return null;
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden max-h-[90vh] flex flex-col"
+            >
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div>
+                        <h3 className="text-xl font-display font-bold text-slate-900">
+                            Order Details #{selectedOrder.orderId}
+                        </h3>
+                        <p className="text-xs text-slate-500">Placed on {new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-900 transition-all"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-8 overflow-y-auto space-y-8">
+                    {/* Customer & Order Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Customer</label>
+                            <p className="font-bold text-slate-900">{selectedOrder.customerName}</p>
+                            <p className="text-sm text-slate-500">{selectedOrder.mobile}</p>
+                            <p className="text-sm text-slate-500">{selectedOrder.email}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Shipping Address</label>
+                            <p className="text-sm text-slate-600 leading-relaxed">{selectedOrder.address}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment & Status</label>
+                            <div className="flex flex-col gap-2">
+                                <span className="font-bold text-lg text-primary-600">₹{selectedOrder.totalPrice?.toFixed(2)}</span>
+                                <select
+                                    value={selectedOrder.status}
+                                    onChange={(e) => handleStatusChange(selectedOrder._id, e.target.value)}
+                                    className={`w-fit px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider outline-none cursor-pointer ${getStatusColor(selectedOrder.status)}`}
+                                >
+                                    {['Received', 'In Design', 'Printing', 'Ready', 'Delivered', 'Cancelled'].map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Items List */}
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">Order Items ({selectedOrder.items?.length || 1})</h4>
+                        <div className="grid grid-cols-1 gap-4">
+                            {(selectedOrder.items?.length > 0 ? selectedOrder.items : [{
+                                productName: selectedOrder.productId?.name,
+                                size: selectedOrder.productDetails?.size,
+                                material: selectedOrder.productDetails?.material,
+                                quantity: selectedOrder.productDetails?.quantity,
+                                uploadedImage: selectedOrder.uploadedImage
+                            }]).map((item, idx) => (
+                                <div key={idx} className="flex flex-col md:flex-row gap-6 p-4 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-md transition-all">
+                                    <div className="w-full md:w-32 h-32 rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0">
+                                        <img src={getImageUrl(item.uploadedImage)} className="w-full h-full object-cover" alt="User upload" />
+                                    </div>
+                                    <div className="flex-grow space-y-2">
+                                        <div className="flex justify-between items-start">
+                                            <h5 className="font-bold text-slate-800 text-lg">{item.productName || 'Order Product'}</h5>
+                                            <div className="flex gap-2">
+                                                <a
+                                                    href={getImageUrl(item.uploadedImage)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="btn btn-secondary p-2 rounded-lg"
+                                                    title="View Full Image"
+                                                >
+                                                    <Eye size={18} />
+                                                </a>
+                                                <button
+                                                    onClick={() => handleDownload(getImageUrl(item.uploadedImage), `${selectedOrder.customerName.replace(/\s+/g, '-').toLowerCase()}-${idx + 1}.jpg`)}
+                                                    className="btn btn-primary p-2 rounded-lg"
+                                                    title="Download Photo"
+                                                >
+                                                    <Download size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-4 text-sm">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Size</span>
+                                                <span className="font-medium text-slate-700">{item.size}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Material</span>
+                                                <span className="font-medium text-slate-700">{item.material}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Quantity</span>
+                                                <span className="font-medium text-slate-700">{item.quantity}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition-all"
+                    >
+                        Close
+                    </button>
+                    <button
+                        onClick={() => handleDeleteOrder(selectedOrder._id)}
+                        className="px-6 py-2 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all flex items-center gap-2"
+                    >
+                        <Trash2 size={16} /> Delete Order
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('orders');
@@ -19,6 +337,7 @@ const AdminDashboard = () => {
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [previewImages, setPreviewImages] = useState([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const navigate = useNavigate();
 
@@ -103,7 +422,6 @@ const AdminDashboard = () => {
             window.URL.revokeObjectURL(blobUrl);
         } catch (error) {
             console.error('Download error:', error);
-            // Fallback if fetch fails (e.g. CORS issues)
             window.open(url, '_blank');
             toast.info('Opened in new tab (Download blocked by browser)');
         }
@@ -113,12 +431,10 @@ const AdminDashboard = () => {
         e.preventDefault();
         const formData = new FormData(e.target);
 
-        // Structure options object
         const sizes = formData.get('sizes_input')?.split(',').map(s => s.trim()).filter(s => s) || [];
         const materials = formData.get('materials_input')?.split(',').map(m => m.trim()).filter(m => m) || [];
         formData.append('options', JSON.stringify({ sizes, materials }));
 
-        // Remove individual inputs to avoid cluttering body
         formData.delete('sizes_input');
         formData.delete('materials_input');
 
@@ -132,6 +448,7 @@ const AdminDashboard = () => {
             }
             setIsProductModalOpen(false);
             setEditingProduct(null);
+            setPreviewImages([]);
             fetchProducts();
         } catch (error) {
             console.error('Submit error:', error);
@@ -166,279 +483,6 @@ const AdminDashboard = () => {
             icon: <Users />, trend: '+2.4%', color: 'bg-amber-50 text-amber-600'
         },
     ];
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Delivered': return 'bg-emerald-100 text-emerald-700';
-            case 'Printing':
-            case 'In Design': return 'bg-primary-100 text-primary-700';
-            case 'Received': return 'bg-amber-100 text-amber-700';
-            case 'Ready': return 'bg-blue-100 text-blue-700';
-            case 'Cancelled': return 'bg-rose-100 text-rose-700';
-            default: return 'bg-slate-100 text-slate-700';
-        }
-    };
-
-    const getImageUrl = (url) => {
-        if (!url) return '';
-        if (url.startsWith('http')) return url;
-        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${url}`;
-    };
-
-    const ProductModal = () => (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
-            >
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="text-xl font-display font-bold text-slate-900">
-                        {editingProduct ? 'Edit Product' : 'Add New Product'}
-                    </h3>
-                    <button
-                        onClick={() => { setIsProductModalOpen(false); setEditingProduct(null); }}
-                        className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-900 transition-all"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-                <form onSubmit={handleProductSubmit} className="p-8 space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Product Name</label>
-                            <input
-                                name="name"
-                                defaultValue={editingProduct?.name}
-                                required
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                placeholder="e.g. Classic Wooden Frame"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Category</label>
-                            <select
-                                name="category"
-                                defaultValue={editingProduct?.category}
-                                required
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                            >
-                                <option value="">Select Category</option>
-                                <option value="Photo Frames">Photo Frames</option>
-                                <option value="Canvas Prints">Canvas Prints</option>
-                                <option value="Custom Gifts">Custom Gifts</option>
-                                <option value="Collage Frames">Collage Frames</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Price</label>
-                            <input
-                                name="price"
-                                type="number"
-                                defaultValue={editingProduct?.price}
-                                required
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                placeholder="0.00"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-slate-400">Description</label>
-                        <textarea
-                            name="description"
-                            defaultValue={editingProduct?.description}
-                            rows="3"
-                            required
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                            placeholder="Product details..."
-                        ></textarea>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Sizes (comma separated)</label>
-                            <input
-                                name="sizes_input"
-                                defaultValue={editingProduct?.options?.sizes?.join(', ')}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                placeholder="8x10, 12x15, 20x24"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Materials (comma separated)</label>
-                            <input
-                                name="materials_input"
-                                defaultValue={editingProduct?.options?.materials?.join(', ')}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                placeholder="Wood, Acrylic, Metal"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-slate-400">Images</label>
-                        <input
-                            name="images"
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-                        />
-                        {editingProduct && <p className="text-[10px] text-amber-500 italic">Leave empty to keep existing images</p>}
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button
-                            type="button"
-                            onClick={() => { setIsProductModalOpen(false); setEditingProduct(null); }}
-                            className="px-6 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-8 py-3 rounded-xl text-sm font-bold bg-primary-600 text-white hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all"
-                        >
-                            {editingProduct ? 'Update Product' : 'Create Product'}
-                        </button>
-                    </div>
-                </form>
-            </motion.div>
-        </div>
-    );
-
-    const OrderDetailsModal = () => {
-        if (!selectedOrder) return null;
-
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden max-h-[90vh] flex flex-col"
-                >
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <div>
-                            <h3 className="text-xl font-display font-bold text-slate-900">
-                                Order Details #{selectedOrder.orderId}
-                            </h3>
-                            <p className="text-xs text-slate-500">Placed on {new Date(selectedOrder.createdAt).toLocaleString()}</p>
-                        </div>
-                        <button
-                            onClick={() => { setIsOrderModalOpen(false); setSelectedOrder(null); }}
-                            className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-900 transition-all"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-
-                    <div className="p-8 overflow-y-auto space-y-8">
-                        {/* Customer & Order Info */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Customer</label>
-                                <p className="font-bold text-slate-900">{selectedOrder.customerName}</p>
-                                <p className="text-sm text-slate-500">{selectedOrder.mobile}</p>
-                                <p className="text-sm text-slate-500">{selectedOrder.email}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Shipping Address</label>
-                                <p className="text-sm text-slate-600 leading-relaxed">{selectedOrder.address}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment & Status</label>
-                                <div className="flex flex-col gap-2">
-                                    <span className="font-bold text-lg text-primary-600">₹{selectedOrder.totalPrice?.toFixed(2)}</span>
-                                    <select
-                                        value={selectedOrder.status}
-                                        onChange={(e) => handleStatusChange(selectedOrder._id, e.target.value)}
-                                        className={`w-fit px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider outline-none cursor-pointer ${getStatusColor(selectedOrder.status)}`}
-                                    >
-                                        {['Received', 'In Design', 'Printing', 'Ready', 'Delivered', 'Cancelled'].map(s => (
-                                            <option key={s} value={s}>{s}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Items List */}
-                        <div className="space-y-4">
-                            <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">Order Items ({selectedOrder.items?.length || 1})</h4>
-                            <div className="grid grid-cols-1 gap-4">
-                                {(selectedOrder.items?.length > 0 ? selectedOrder.items : [{
-                                    productName: selectedOrder.productId?.name,
-                                    size: selectedOrder.productDetails?.size,
-                                    material: selectedOrder.productDetails?.material,
-                                    quantity: selectedOrder.productDetails?.quantity,
-                                    uploadedImage: selectedOrder.uploadedImage
-                                }]).map((item, idx) => (
-                                    <div key={idx} className="flex flex-col md:flex-row gap-6 p-4 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-md transition-all">
-                                        <div className="w-full md:w-32 h-32 rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0">
-                                            <img src={getImageUrl(item.uploadedImage)} className="w-full h-full object-cover" alt="User upload" />
-                                        </div>
-                                        <div className="flex-grow space-y-2">
-                                            <div className="flex justify-between items-start">
-                                                <h5 className="font-bold text-slate-800 text-lg">{item.productName || 'Order Product'}</h5>
-                                                <div className="flex gap-2">
-                                                    <a
-                                                        href={getImageUrl(item.uploadedImage)}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="btn btn-secondary p-2 rounded-lg"
-                                                        title="View Full Image"
-                                                    >
-                                                        <Eye size={18} />
-                                                    </a>
-                                                    <button
-                                                        onClick={() => handleDownload(getImageUrl(item.uploadedImage), `${selectedOrder.customerName.replace(/\s+/g, '-').toLowerCase()}-${idx + 1}.jpg`)}
-                                                        className="btn btn-primary p-2 rounded-lg"
-                                                        title="Download Photo"
-                                                    >
-                                                        <Download size={18} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-4 text-sm">
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Size</span>
-                                                    <span className="font-medium text-slate-700">{item.size}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Material</span>
-                                                    <span className="font-medium text-slate-700">{item.material}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Quantity</span>
-                                                    <span className="font-medium text-slate-700">{item.quantity}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
-                        <button
-                            onClick={() => { setIsOrderModalOpen(false); setSelectedOrder(null); }}
-                            className="px-6 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition-all"
-                        >
-                            Close
-                        </button>
-                        <button
-                            onClick={() => handleDeleteOrder(selectedOrder._id)}
-                            className="px-6 py-2 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all flex items-center gap-2"
-                        >
-                            <Trash2 size={16} /> Delete Order
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
-        );
-    };
 
     const SidebarContent = () => (
         <>
@@ -741,7 +785,7 @@ const AdminDashboard = () => {
                                                 </tr>
                                             ))}
                                             {orders.length === 0 && (
-                                                <tr><td colSpan="6" className="p-10 text-center text-slate-400">No orders found.</td></tr>
+                                                <tr><td colSpan="5" className="p-10 text-center text-slate-400">No orders found.</td></tr>
                                             )}
                                         </tbody>
                                     </table>
@@ -789,9 +833,25 @@ const AdminDashboard = () => {
                         )}
                     </div>
                 </div>
-                {isProductModalOpen && <ProductModal />}
-                {isOrderModalOpen && <OrderDetailsModal />}
             </div>
+
+            <ProductModal
+                isOpen={isProductModalOpen}
+                onClose={() => { setIsProductModalOpen(false); setEditingProduct(null); setPreviewImages([]); }}
+                editingProduct={editingProduct}
+                previewImages={previewImages}
+                setPreviewImages={setPreviewImages}
+                handleProductSubmit={handleProductSubmit}
+            />
+            <OrderDetailsModal
+                isOpen={isOrderModalOpen}
+                onClose={() => { setIsOrderModalOpen(false); setSelectedOrder(null); }}
+                selectedOrder={selectedOrder}
+                handleStatusChange={handleStatusChange}
+                handleDeleteOrder={handleDeleteOrder}
+                handleDownload={handleDownload}
+                getStatusColor={getStatusColor}
+            />
         </div>
     );
 };

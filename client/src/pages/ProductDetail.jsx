@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Plus, Minus, ShoppingCart, Share2, Upload, Check, Loader2 } from 'lucide-react';
 import { productAPI } from '../services/apiService';
 import { toast } from 'sonner';
@@ -109,7 +109,7 @@ const ProductDetail = () => {
     if (!product) return null;
 
     return (
-        <div className="py-24 bg-white min-h-screen">
+        <div className="pt-8 pb-8 bg-white min-h-screen">
             <div className="container mx-auto px-4 md:px-6">
                 <Link to="/products" className="inline-flex items-center text-slate-500 hover:text-primary-600 mb-8 transition-colors">
                     <ChevronLeft size={20} />
@@ -118,22 +118,90 @@ const ProductDetail = () => {
 
                 <div className="flex flex-col lg:flex-row gap-12">
                     {/* Gallery */}
-                    <div className="lg:w-1/2 flex flex-col gap-4">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="aspect-square rounded-3xl overflow-hidden bg-slate-100 shadow-xl border border-slate-100"
-                        >
-                            <img src={activeImage} alt={product.name} className="w-full h-full object-cover" />
-                        </motion.div>
-                        <div className="flex gap-4">
+                    <div className="lg:w-1/2 flex flex-col gap-6">
+                        <div className="relative group">
+                            <div className="aspect-[4/3] rounded-3xl overflow-hidden bg-slate-100 shadow-xl border border-slate-100 relative">
+                                <AnimatePresence mode="wait">
+                                    <motion.img
+                                        key={activeImage}
+                                        src={activeImage}
+                                        alt={product.name}
+                                        initial={{ opacity: 0, x: 100 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -100 }}
+                                        drag="x"
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        onDragEnd={(e, { offset, velocity }) => {
+                                            if (product.images.length <= 1) return;
+                                            const swipeThreshold = 50;
+                                            if (offset.x < -swipeThreshold) {
+                                                // Swipe Left -> Next Image
+                                                const currentIndex = product.images.findIndex(img => getImageUrl(img) === activeImage);
+                                                const nextIndex = (currentIndex + 1) % product.images.length;
+                                                setActiveImage(getImageUrl(product.images[nextIndex]));
+                                            } else if (offset.x > swipeThreshold) {
+                                                // Swipe Right -> Prev Image
+                                                const currentIndex = product.images.findIndex(img => getImageUrl(img) === activeImage);
+                                                const prevIndex = (currentIndex - 1 + product.images.length) % product.images.length;
+                                                setActiveImage(getImageUrl(product.images[prevIndex]));
+                                            }
+                                        }}
+                                        transition={{
+                                            x: { type: "spring", stiffness: 300, damping: 30 },
+                                            opacity: { duration: 0.2 }
+                                        }}
+                                        className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                                    />
+                                </AnimatePresence>
+
+                                {/* Navigation Arrows */}
+                                {product.images.length > 1 && (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                const currentIndex = product.images.findIndex(img => getImageUrl(img) === activeImage);
+                                                const prevIndex = (currentIndex - 1 + product.images.length) % product.images.length;
+                                                setActiveImage(getImageUrl(product.images[prevIndex]));
+                                            }}
+                                            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-slate-200 flex items-center justify-center text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
+                                        >
+                                            <ChevronLeft size={24} />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const currentIndex = product.images.findIndex(img => getImageUrl(img) === activeImage);
+                                                const nextIndex = (currentIndex + 1) % product.images.length;
+                                                setActiveImage(getImageUrl(product.images[nextIndex]));
+                                            }}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-slate-200 flex items-center justify-center text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
+                                        >
+                                            <ChevronLeft size={24} className="rotate-180" />
+                                        </button>
+                                    </>
+                                )}
+
+                                {/* Dot Indicators */}
+                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+                                    {product.images.map((img, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setActiveImage(getImageUrl(img))}
+                                            className={`h-1.5 rounded-full transition-all ${activeImage === getImageUrl(img) ? 'w-8 bg-primary-600' : 'w-2 bg-slate-400/50 hover:bg-slate-400'}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Thumbnails */}
+                        <div className="flex gap-4 overflow-x-auto p-2 scrollbar-active">
                             {product.images.map((img, i) => (
                                 <button
                                     key={i}
                                     onClick={() => setActiveImage(getImageUrl(img))}
-                                    className={`w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all ${activeImage === getImageUrl(img) ? 'border-primary-600 scale-105' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                                    className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden border-2 transition-all ${activeImage === getImageUrl(img) ? 'border-primary-600 scale-105' : 'border-transparent opacity-70 hover:opacity-100'}`}
                                 >
-                                    <img src={getImageUrl(img)} alt="Thumbnail" className="w-full h-full object-cover" />
+                                    <img src={getImageUrl(img)} alt={`Thumbnail ${i + 1}`} className="w-full h-full object-cover" />
                                 </button>
                             ))}
                         </div>
@@ -150,7 +218,7 @@ const ProductDetail = () => {
                                 </div>
                                 <span className="text-sm text-slate-500 font-medium">In Stock</span>
                             </div>
-                            <h1 className="text-4xl md:text-5xl font-display font-bold text-slate-900 mb-4">{product.name}</h1>
+                            <h1 className="text-3xl md:text-4xl font-display font-bold text-slate-900 mb-4">{product.name}</h1>
                             <div className="flex items-center gap-4 mb-6">
                                 <span className="text-3xl font-display font-bold text-primary-600">₹{product.price}</span>
                                 <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
@@ -277,6 +345,34 @@ const ProductDetail = () => {
                                 <button className="btn btn-secondary p-4 w-14">
                                     <Share2 size={24} />
                                 </button>
+                            </div>
+                            <div className="mt-8 flex flex-col gap-4 border-t border-slate-100 pt-8">
+                                <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest font-black">Secure Checkout Guaranteed</p>
+                                <div className="flex justify-center items-center gap-6 opacity-60">
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="px-2 py-1 border border-slate-100 rounded bg-white shadow-sm flex items-center justify-center">
+                                            <span className="text-[8px] font-black italic text-[#1434CB]">VISA</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="px-2 py-1 border border-slate-100 rounded bg-white shadow-sm flex items-center justify-center">
+                                            <div className="flex -space-x-1">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-[#EB001B]"></div>
+                                                <div className="w-2.5 h-2.5 rounded-full bg-[#F79E1B] opacity-80"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="px-2 py-1 border border-slate-100 rounded bg-white shadow-sm flex items-center justify-center">
+                                            <span className="text-[8px] font-black text-[#5C2D91]">UPI</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="px-2 py-1 border border-slate-100 rounded bg-white shadow-sm flex items-center justify-center">
+                                            <span className="text-[8px] font-black text-slate-800">RuPay</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

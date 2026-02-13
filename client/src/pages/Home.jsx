@@ -79,7 +79,7 @@ const Home = () => {
                             </p>
                             <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
                                 <Link to="/products" className="btn btn-primary px-8 py-4 text-lg">
-                                    Browse Collection
+                                    Create Your Frame Now
                                     <ArrowRight size={20} className="ml-2" />
                                 </Link>
                                 <Link to="/track" className="btn btn-secondary px-8 py-4 text-lg">
