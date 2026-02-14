@@ -235,18 +235,10 @@ const OrderDetailsModal = ({
                             <p className="text-sm text-slate-600 leading-relaxed">{selectedOrder.address}</p>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment & Status</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment</label>
                             <div className="flex flex-col gap-2">
                                 <span className="font-bold text-lg text-primary-600">₹{selectedOrder.totalPrice?.toFixed(2)}</span>
-                                <select
-                                    value={selectedOrder.status}
-                                    onChange={(e) => handleStatusChange(selectedOrder._id, e.target.value)}
-                                    className={`w-fit px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider outline-none cursor-pointer ${getStatusColor(selectedOrder.status)}`}
-                                >
-                                    {['Received', 'In Design', 'Printing', 'Ready', 'Delivered', 'Cancelled'].map(s => (
-                                        <option key={s} value={s}>{s}</option>
-                                    ))}
-                                </select>
+                                <span className={`px-2 w-fit py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${selectedOrder.paymentMethod === 'COD' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{selectedOrder.paymentMethod || 'Prepaid'}</span>
                             </div>
                         </div>
                     </div>
@@ -747,6 +739,7 @@ const AdminDashboard = () => {
                                                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Customer</th>
                                                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                                                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Payment</th>
                                                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product Details</th>
                                             </tr>
                                         </thead>
@@ -772,6 +765,11 @@ const AdminDashboard = () => {
                                                         </select>
                                                     </td>
                                                     <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
+                                                    <td className="px-6 py-5">
+                                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${order.paymentMethod === 'COD' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                            {order.paymentMethod || 'Prepaid'}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-5">
                                                         <div className="flex gap-2">
                                                             <button
@@ -801,7 +799,12 @@ const AdminDashboard = () => {
                                                     <h4 className="font-bold text-slate-900">{order.customerName}</h4>
                                                     <p className="text-[10px] text-slate-400">{order.mobile}</p>
                                                 </div>
-                                                <p className="font-black text-slate-900">₹{order.totalPrice?.toFixed(2)}</p>
+                                                <div className="text-right flex flex-col items-end gap-1">
+                                                    <p className="font-black text-slate-900">₹{order.totalPrice?.toFixed(2)}</p>
+                                                    <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider ${order.paymentMethod === 'COD' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                        {order.paymentMethod || 'Prepaid'}
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div className="flex flex-col gap-3">
                                                 <div className="flex justify-between items-center text-sm">
