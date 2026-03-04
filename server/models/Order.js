@@ -31,6 +31,10 @@ const orderSchema = new mongoose.Schema({
         productPrice: Number,
         size: String,
         material: String,
+        artStyle: {
+            type: String,
+            default: 'Normal (Original)'
+        },
         quantity: {
             type: Number,
             default: 1,
@@ -38,6 +42,14 @@ const orderSchema = new mongoose.Schema({
         uploadedImage: {
             type: String,
             required: true
+        },
+        personalMessage: {
+            type: String,
+            default: ''
+        },
+        instructions: {
+            type: String,
+            default: ''
         }
     }],
     // Keep these for backward compatibility during migration
@@ -48,6 +60,7 @@ const orderSchema = new mongoose.Schema({
     productDetails: {
         size: String,
         material: String,
+        artStyle: String,
         quantity: Number
     },
     uploadedImage: {
@@ -57,6 +70,17 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ['Received', 'In Design', 'Printing', 'Ready', 'Delivered', 'Cancelled'],
         default: 'Received',
+    },
+    subtotal: {
+        type: Number,
+    },
+    discountAmount: {
+        type: Number,
+        default: 0
+    },
+    couponCode: {
+        type: String,
+        uppercase: true
     },
     totalPrice: {
         type: Number,

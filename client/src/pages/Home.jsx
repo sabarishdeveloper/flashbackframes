@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Image as ImageIcon, Gift, CheckCircle, Star } from 'lucide-react';
 import { productAPI } from '../services/apiService';
+import { FRAME_SIZES } from '../utils/constants';
 
 const Home = () => {
     const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -171,7 +172,11 @@ const Home = () => {
                                 <div className="p-5">
                                     <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">{p.category}</p>
                                     <h3 className="text-lg font-bold text-slate-800 mb-1 group-hover:text-primary-600 transition-colors h-12 overflow-hidden">{p.name}</h3>
-                                    <p className="text-primary-600 font-bold">₹{p.price}</p>
+                                    <p className="text-primary-600 font-bold">
+                                        {p.useGlobalPricing
+                                            ? `From ₹${FRAME_SIZES[0].mat}`
+                                            : `₹${p.price}`}
+                                    </p>
                                     <Link to={`/product/${p._id}`} className="btn btn-primary w-full flex items-center justify-center gap-2 mt-4">
                                         View Details
                                         <ArrowRight size={16} />

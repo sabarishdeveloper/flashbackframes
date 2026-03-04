@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users, ShoppingBag, DollarSign, Package,
-    Search, Bell, Edit2, Trash2,
+    Search, Bell, Edit2, Trash2, Ticket,
     Download, Filter, Sidebar, Loader2, LogOut, Plus, X, Eye, Menu
 } from 'lucide-react';
-import { orderAPI, productAPI } from '../services/apiService';
+import { orderAPI, productAPI, couponAPI } from '../services/apiService';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,6 +35,12 @@ const ProductModal = ({
     setPreviewImages,
     handleProductSubmit
 }) => {
+    const [useGlobal, setUseGlobal] = useState(editingProduct?.useGlobalPricing || false);
+
+    useEffect(() => {
+        setUseGlobal(editingProduct?.useGlobalPricing || false);
+    }, [editingProduct, isOpen]);
+
     if (!isOpen) return null;
 
     return (
@@ -88,10 +94,26 @@ const ProductModal = ({
                                 name="price"
                                 type="number"
                                 defaultValue={editingProduct?.price}
-                                required
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                placeholder="0.00"
+                                required={!useGlobal}
+                                disabled={useGlobal}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+                                placeholder={useGlobal ? "Fixed by Size" : "0.00"}
                             />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 bg-primary-50/50 rounded-2xl border border-primary-100">
+                        <input
+                            type="checkbox"
+                            name="useGlobalPricing"
+                            id="useGlobalPricing"
+                            checked={useGlobal}
+                            onChange={(e) => setUseGlobal(e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <div>
+                            <label htmlFor="useGlobalPricing" className="text-sm font-bold text-slate-900 block">Use Global Frame Pricing</label>
+                            <p className="text-[10px] text-slate-500 leading-tight">If enabled, this product will use fixed prices based on frame sizes (8x6, 12x18, etc.)</p>
                         </div>
                     </div>
 
@@ -113,17 +135,19 @@ const ProductModal = ({
                             <input
                                 name="sizes_input"
                                 defaultValue={editingProduct?.options?.sizes?.join(', ')}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                placeholder="8x10, 12x15, 20x24"
+                                disabled={useGlobal}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+                                placeholder={useGlobal ? "All Standard Sizes Enabled" : "8x10, 12x15, 20x24"}
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Materials (comma separated)</label>
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">{useGlobal ? 'Finish (Standard)' : 'Finishes (comma separated)'}</label>
                             <input
                                 name="materials_input"
                                 defaultValue={editingProduct?.options?.materials?.join(', ')}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                placeholder="Wood, Acrylic, Metal"
+                                disabled={useGlobal}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+                                placeholder={useGlobal ? "Standard Finishes Enabled" : "Mat, Glossy, Glitter"}
                             />
                         </div>
                     </div>
@@ -188,6 +212,116 @@ const ProductModal = ({
     );
 };
 
+const CouponModal = ({ isOpen, onClose, handleCouponSubmit }) => {
+    const [formData, setFormData] = useState({
+        code: '',
+        discountType: 'flat',
+        discountValue: '',
+        minOrderValue: 0,
+        maxDiscountAmount: 0,
+        expiryDate: ''
+    });
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        handleCouponSubmit(formData);
+        onClose();
+        setFormData({
+            code: '',
+            discountType: 'flat',
+            discountValue: '',
+            minOrderValue: 0,
+            maxDiscountAmount: 0,
+            expiryDate: ''
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 className="text-xl font-display font-bold text-slate-900">Create New Coupon</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-900 transition-all">
+                        <X size={20} />
+                    </button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                    <div className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Coupon Code</label>
+                            <input
+                                required
+                                type="text"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all font-bold uppercase"
+                                placeholder="E.G. SAVE20"
+                                value={formData.code}
+                                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-400">Type</label>
+                                <select
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all font-bold"
+                                    value={formData.discountType}
+                                    onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
+                                >
+                                    <option value="flat">Flat Amount</option>
+                                    <option value="percentage">Percentage</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-400">Value {formData.discountType === 'percentage' ? '(%)' : '(₹)'}</label>
+                                <input
+                                    required
+                                    type="number"
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all font-bold"
+                                    value={formData.discountValue}
+                                    onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Min Order Value (₹)</label>
+                            <input
+                                type="number"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all font-bold"
+                                value={formData.minOrderValue}
+                                onChange={(e) => setFormData({ ...formData, minOrderValue: e.target.value })}
+                            />
+                        </div>
+                        {formData.discountType === 'percentage' && (
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-400">Max Discount Amount (₹)</label>
+                                <input
+                                    type="number"
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all font-bold"
+                                    value={formData.maxDiscountAmount}
+                                    onChange={(e) => setFormData({ ...formData, maxDiscountAmount: e.target.value })}
+                                />
+                            </div>
+                        )}
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Expiry Date</label>
+                            <input
+                                type="date"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all font-bold"
+                                value={formData.expiryDate}
+                                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <button type="submit" className="btn btn-primary w-full py-4 text-lg mt-4 shadow-xl shadow-primary-200">
+                        Create Coupon
+                    </button>
+                </form>
+            </motion.div>
+        </div>
+    );
+};
+
 const OrderDetailsModal = ({
     isOpen,
     onClose,
@@ -235,10 +369,28 @@ const OrderDetailsModal = ({
                             <p className="text-sm text-slate-600 leading-relaxed">{selectedOrder.address}</p>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment</label>
-                            <div className="flex flex-col gap-2">
-                                <span className="font-bold text-lg text-primary-600">₹{selectedOrder.totalPrice?.toFixed(2)}</span>
-                                <span className={`px-2 w-fit py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${selectedOrder.paymentMethod === 'COD' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{selectedOrder.paymentMethod || 'Prepaid'}</span>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment Summary</label>
+                            <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
+                                {selectedOrder.subtotal && (
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Subtotal</span>
+                                        <span className="font-bold text-slate-700">₹{selectedOrder.subtotal.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {selectedOrder.discountAmount > 0 && (
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-green-600 font-bold uppercase tracking-widest text-[10px]">Discount ({selectedOrder.couponCode})</span>
+                                        <span className="font-bold text-green-600">- ₹ {selectedOrder.discountAmount.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                                    <span className="text-sm font-bold text-slate-800">Total Paid</span>
+                                    <span className="font-black text-xl text-primary-600">₹{selectedOrder.totalPrice?.toFixed(2)}</span>
+                                </div>
+                                <div className="flex gap-2 mt-2">
+                                    <span className="px-2 w-fit py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700">{selectedOrder.paymentMethod || 'Prepaid'}</span>
+                                    <span className={`px-2 w-fit py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${selectedOrder.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{selectedOrder.paymentStatus}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -251,6 +403,7 @@ const OrderDetailsModal = ({
                                 productName: selectedOrder.productId?.name,
                                 size: selectedOrder.productDetails?.size,
                                 material: selectedOrder.productDetails?.material,
+                                artStyle: selectedOrder.productDetails?.artStyle,
                                 quantity: selectedOrder.productDetails?.quantity,
                                 uploadedImage: selectedOrder.uploadedImage
                             }]).map((item, idx) => (
@@ -280,20 +433,40 @@ const OrderDetailsModal = ({
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-4 text-sm">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                                             <div>
                                                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Size</span>
                                                 <span className="font-medium text-slate-700">{item.size}</span>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Material</span>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Finish</span>
                                                 <span className="font-medium text-slate-700">{item.material}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Art Style</span>
+                                                <span className="font-medium text-slate-700">{item.artStyle || 'Normal'}</span>
                                             </div>
                                             <div>
                                                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Quantity</span>
                                                 <span className="font-medium text-slate-700">{item.quantity}</span>
                                             </div>
                                         </div>
+                                        {(item.personalMessage || item.instructions) && (
+                                            <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {item.personalMessage && (
+                                                    <div className="bg-primary-50/50 p-2 rounded-lg">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary-600 block mb-1">Personal Message</span>
+                                                        <p className="text-xs text-slate-700 italic">"{item.personalMessage}"</p>
+                                                    </div>
+                                                )}
+                                                {item.instructions && (
+                                                    <div className="bg-amber-50/50 p-2 rounded-lg">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 block mb-1">Special Instructions</span>
+                                                        <p className="text-xs text-slate-700">{item.instructions}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -331,13 +504,21 @@ const AdminDashboard = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [previewImages, setPreviewImages] = useState([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
     const navigate = useNavigate();
+
+    // Coupons State
+    const [coupons, setCoupons] = useState([]);
+    const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
 
     useEffect(() => {
         if (activeTab === 'orders' || activeTab === 'dashboard') {
             fetchOrders();
         } else if (activeTab === 'products') {
             fetchProducts();
+        } else if (activeTab === 'coupons') {
+            fetchCoupons();
         }
     }, [activeTab]);
 
@@ -363,6 +544,19 @@ const AdminDashboard = () => {
         } catch (error) {
             console.error('Fetch products error:', error);
             toast.error('Failed to load products');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchCoupons = async () => {
+        setLoading(true);
+        try {
+            const response = await couponAPI.getAll();
+            setCoupons(response.data.data);
+        } catch (error) {
+            console.error('Fetch coupons error:', error);
+            toast.error('Failed to load coupons');
         } finally {
             setLoading(false);
         }
@@ -400,6 +594,27 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleCouponSubmit = async (data) => {
+        try {
+            await couponAPI.create(data);
+            toast.success('Coupon created successfully!');
+            fetchCoupons();
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to create coupon');
+        }
+    };
+
+    const handleDeleteCoupon = async (id) => {
+        if (!window.confirm('Delete this coupon?')) return;
+        try {
+            await couponAPI.delete(id);
+            toast.success('Coupon deleted');
+            fetchCoupons();
+        } catch (error) {
+            toast.error('Failed to delete coupon');
+        }
+    };
+
     const handleDownload = async (url, filename) => {
         try {
             const response = await fetch(url);
@@ -425,7 +640,10 @@ const AdminDashboard = () => {
 
         const sizes = formData.get('sizes_input')?.split(',').map(s => s.trim()).filter(s => s) || [];
         const materials = formData.get('materials_input')?.split(',').map(m => m.trim()).filter(m => m) || [];
+        const useGlobalPricing = formData.get('useGlobalPricing') === 'on';
+
         formData.append('options', JSON.stringify({ sizes, materials }));
+        formData.set('useGlobalPricing', useGlobalPricing);
 
         formData.delete('sizes_input');
         formData.delete('materials_input');
@@ -498,6 +716,7 @@ const AdminDashboard = () => {
                     { id: 'dashboard', label: 'Dashboard', icon: <Sidebar size={18} /> },
                     { id: 'orders', label: 'Orders', icon: <ShoppingBag size={18} /> },
                     { id: 'products', label: 'Products', icon: <Package size={18} /> },
+                    { id: 'coupons', label: 'Coupons', icon: <Ticket size={18} /> },
                     { id: 'customers', label: 'Customers', icon: <Users size={18} /> },
                 ].map((item) => (
                     <button
@@ -577,7 +796,7 @@ const AdminDashboard = () => {
                     </div>
                 </header>
 
-                <div className="p-4 md:p-8 max-w-[1600px] mx-auto w-full">
+                <div className="p-4 md:p-8 max-w-[1280px] mx-auto w-full">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
                         <div>
                             <h1 className="text-2xl md:text-3xl font-display font-bold text-slate-900 capitalize">{activeTab} Overview</h1>
@@ -614,201 +833,186 @@ const AdminDashboard = () => {
                         </div>
                     )}
 
-                    <div className="card-premium overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-slate-900 tracking-tight">
-                                {activeTab === 'products' ? 'All Products' : 'Recent Orders'}
-                            </h3>
-                            <div className="flex gap-2">
-                                <button className="inline-flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50">
-                                    <Filter size={14} /> Filter
-                                </button>
-                            </div>
-                        </div>
-
-                        {loading ? (
-                            <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-primary-600" /></div>
-                        ) : activeTab === 'products' ? (
-                            <>
-                                {/* Desktop Tablet View */}
-                                <div className="hidden md:block overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="bg-slate-50/50 border-b border-slate-100">
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product</th>
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Price</th>
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {products.map((product) => (
-                                                <tr key={product._id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden">
-                                                                {product.images?.[0] && (
-                                                                    <img
-                                                                        src={getImageUrl(product.images[0])}
-                                                                        className="w-full h-full object-cover"
-                                                                        alt={product.name}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-bold text-slate-800 text-sm">{product.name}</span>
-                                                                <span className="text-[10px] text-slate-400 truncate w-48">{product.description}</span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{product.price}</td>
-                                                    <td className="px-6 py-5">
-                                                        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }}
-                                                                className="p-2 hover:bg-primary-50 text-primary-600 rounded-lg transition-all"
-                                                            >
-                                                                <Edit2 size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteProduct(product._id)}
-                                                                className="p-2 hover:bg-rose-50 text-rose-600 rounded-lg transition-all"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                    {loading ? (
+                        <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-primary-600" /></div>
+                    ) : activeTab === 'products' ? (
+                        <div className="card-premium overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-slate-900 tracking-tight">All Products</h3>
+                                <div className="flex gap-2">
+                                    <button className="inline-flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50">
+                                        <Filter size={14} /> Filter
+                                    </button>
                                 </div>
-
-                                {/* Mobile List View */}
-                                <div className="md:hidden divide-y divide-slate-100">
-                                    {products.map((product) => (
-                                        <div key={product._id} className="p-4 space-y-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
-                                                    {product.images?.[0] && (
-                                                        <img
-                                                            src={getImageUrl(product.images[0])}
-                                                            className="w-full h-full object-cover"
-                                                            alt={product.name}
-                                                        />
-                                                    )}
-                                                </div>
-                                                <div className="flex-grow min-w-0">
-                                                    <h4 className="font-bold text-slate-900 truncate">{product.name}</h4>
-                                                    <p className="text-xs text-primary-600 font-bold">₹{product.price}</p>
-                                                    <p className="text-[10px] text-slate-400 line-clamp-1">{product.description}</p>
-                                                </div>
+                            </div>
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Price</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {products.map((product) => (
+                                            <tr key={product._id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden">
+                                                            {product.images?.[0] && (
+                                                                <img src={getImageUrl(product.images[0])} className="w-full h-full object-cover" alt={product.name} />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-slate-800 text-sm">{product.name}</span>
+                                                            <span className="text-[10px] text-slate-400 truncate w-48">{product.description}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5 font-bold text-slate-900 text-sm">
+                                                    {product.useGlobalPricing ? 'Global Pricing' : `₹${product.price}`}
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }} className="p-2 hover:bg-primary-50 text-primary-600 rounded-lg transition-all"><Edit2 size={16} /></button>
+                                                        <button onClick={() => handleDeleteProduct(product._id)} className="p-2 hover:bg-rose-50 text-rose-600 rounded-lg transition-all"><Trash2 size={16} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="md:hidden divide-y divide-slate-100">
+                                {products.map((product) => (
+                                    <div key={product._id} className="p-4 space-y-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
+                                                {product.images?.[0] && <img src={getImageUrl(product.images[0])} className="w-full h-full object-cover" alt={product.name} />}
                                             </div>
-                                            <div className="flex justify-between items-center bg-slate-50/50 p-2 rounded-xl">
-                                                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider text-center">Active</span>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }}
-                                                        className="p-3 bg-white border border-slate-200 text-slate-600 rounded-xl transition-all shadow-sm active:scale-95"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteProduct(product._id)}
-                                                        className="p-3 bg-white border border-slate-200 text-rose-500 rounded-xl transition-all shadow-sm active:scale-95"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
+                                            <div className="flex-grow min-w-0">
+                                                <h4 className="font-bold text-slate-900 truncate">{product.name}</h4>
+                                                <p className="text-xs text-primary-600 font-bold">₹{product.price}</p>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                {/* Desktop/Tablet Table */}
-                                <div className="hidden md:block overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="bg-slate-50/50 border-b border-slate-100">
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Order ID</th>
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Customer</th>
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Payment</th>
-                                                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Product Details</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {orders.map((order) => (
-                                                <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-6 py-5 font-bold text-primary-600 text-sm">{order.orderId}</td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-slate-800 text-sm">{order.customerName}</span>
-                                                            <span className="text-[10px] text-slate-400">{order.mobile}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <select
-                                                            value={order.status}
-                                                            onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                                                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider outline-none cursor-pointer ${getStatusColor(order.status)}`}
-                                                        >
-                                                            {['Received', 'In Design', 'Printing', 'Ready', 'Delivered', 'Cancelled'].map(s => (
-                                                                <option key={s} value={s}>{s}</option>
-                                                            ))}
-                                                        </select>
-                                                    </td>
-                                                    <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
-                                                    <td className="px-6 py-5">
-                                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${order.paymentMethod === 'COD' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                                                            {order.paymentMethod || 'Prepaid'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => { setSelectedOrder(order); setIsOrderModalOpen(true); }}
-                                                                className="px-4 py-2 bg-primary-50 text-primary-600 rounded-xl text-xs font-bold hover:bg-primary-100 transition-all flex items-center gap-2"
-                                                            >
-                                                                <Eye size={14} /> View Product Details
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            {orders.length === 0 && (
-                                                <tr><td colSpan="5" className="p-10 text-center text-slate-400">No orders found.</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Mobile Card List */}
-                                <div className="md:hidden divide-y divide-slate-100">
-                                    {orders.map((order) => (
-                                        <div key={order._id} className="p-4 space-y-4">
-                                            <div className="flex justify-between items-start">
-                                                <div className="space-y-1">
-                                                    <p className="text-xs font-bold text-primary-600">#{order.orderId}</p>
-                                                    <h4 className="font-bold text-slate-900">{order.customerName}</h4>
-                                                    <p className="text-[10px] text-slate-400">{order.mobile}</p>
-                                                </div>
-                                                <div className="text-right flex flex-col items-end gap-1">
-                                                    <p className="font-black text-slate-900">₹{order.totalPrice?.toFixed(2)}</p>
-                                                    <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider ${order.paymentMethod === 'COD' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                                                        {order.paymentMethod || 'Prepaid'}
-                                                    </span>
-                                                </div>
+                                        <div className="flex justify-between items-center bg-slate-50/50 p-2 rounded-xl">
+                                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }} className="p-2 bg-white border border-slate-200 text-slate-600 rounded-xl shadow-sm"><Edit2 size={16} /></button>
+                                                <button onClick={() => handleDeleteProduct(product._id)} className="p-2 bg-white border border-slate-200 text-rose-500 rounded-xl shadow-sm"><Trash2 size={16} /></button>
                                             </div>
-                                            <div className="flex flex-col gap-3">
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <span className="text-slate-500 text-xs font-bold">Status:</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : activeTab === 'coupons' ? (
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-800 tracking-tight">Coupon Management</h3>
+                                    <p className="text-sm text-slate-500 font-medium">Create and manage discount codes for your customers</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsCouponModalOpen(true)}
+                                    className="px-6 py-3 bg-primary-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all"
+                                >
+                                    <Plus size={18} /> New Coupon
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {coupons.map((coupon) => (
+                                    <motion.div
+                                        key={coupon._id}
+                                        layout
+                                        className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden group border-b-4 border-b-primary-500"
+                                    >
+                                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => handleDeleteCoupon(coupon._id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-start gap-4 mb-4">
+                                            <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600 flex-shrink-0">
+                                                <Ticket size={24} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xl font-black text-slate-900 tracking-tight uppercase font-display">{coupon.code}</h4>
+                                                <p className="text-sm font-black text-primary-600 bg-primary-50 px-2.5 py-1 rounded-lg w-fit mt-1">
+                                                    {coupon.discountType === 'flat' ? `₹${coupon.discountValue} Off` : `${coupon.discountValue}% Off`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3 border-t border-slate-100 pt-5 mt-2">
+                                            <div className="flex justify-between text-xs font-bold">
+                                                <span className="text-slate-400 uppercase tracking-widest text-[9px]">Min. Order</span>
+                                                <span className="text-slate-800 text-sm font-black tracking-tight">₹{coupon.minOrderValue}</span>
+                                            </div>
+                                            {coupon.discountType === 'percentage' && (
+                                                <div className="flex justify-between text-xs font-bold">
+                                                    <span className="text-slate-400 uppercase tracking-widest text-[9px]">Max Discount</span>
+                                                    <span className="text-slate-800 text-sm font-black tracking-tight">₹{coupon.maxDiscountAmount || 'No Limit'}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between text-xs font-bold">
+                                                <span className="text-slate-400 uppercase tracking-widest text-[9px]">Status</span>
+                                                <span className={`text-[10px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full ${coupon.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                    {coupon.isActive ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between text-xs font-bold pt-1">
+                                                <span className="text-slate-400 uppercase tracking-widest text-[9px]">Expires</span>
+                                                <span className="text-slate-800 text-sm font-bold tracking-tight">{coupon.expiryDate ? new Date(coupon.expiryDate).toLocaleDateString() : 'Never'}</span>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                                {coupons.length === 0 && !loading && (
+                                    <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-slate-100 shadow-inner">
+                                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
+                                            <Ticket size={40} />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-slate-400 tracking-tight">No coupons found</h3>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="card-premium overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Recent Orders</h3>
+                                <div className="flex gap-2">
+                                    <button className="inline-flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50">
+                                        <Filter size={14} /> Filter
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Order ID</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Discount</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Total</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {orders.map((order) => (
+                                            <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-5 font-bold text-primary-600 text-sm">{order.orderId}</td>
+                                                <td className="px-6 py-5">
+                                                    <div className="font-bold text-slate-800 text-sm">{order.customerName}</div>
+                                                    <div className="text-[10px] text-slate-400">{order.mobile}</div>
+                                                </td>
+                                                <td className="px-6 py-5">
                                                     <select
                                                         value={order.status}
                                                         onChange={(e) => handleStatusChange(order._id, e.target.value)}
@@ -818,23 +1022,58 @@ const AdminDashboard = () => {
                                                             <option key={s} value={s}>{s}</option>
                                                         ))}
                                                     </select>
-                                                </div>
-                                                <button
-                                                    onClick={() => { setSelectedOrder(order); setIsOrderModalOpen(true); }}
-                                                    className="w-full py-3 bg-primary-50 text-primary-600 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
-                                                >
-                                                    <Eye size={14} /> View Order Details
-                                                </button>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    {order.discountAmount > 0 ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="text-emerald-600 font-bold text-sm">-₹{order.discountAmount}</span>
+                                                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">{order.couponCode}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-slate-300 text-xs">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-5 font-bold text-slate-900 text-sm">₹{order.totalPrice?.toFixed(2)}</td>
+                                                <td className="px-6 py-5">
+                                                    <button onClick={() => { setSelectedOrder(order); setIsOrderModalOpen(true); }} className="px-4 py-2 bg-primary-50 text-primary-600 rounded-xl text-xs font-bold hover:bg-primary-100 transition-all flex items-center gap-2">
+                                                        <Eye size={14} /> View Details
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="md:hidden divide-y divide-slate-100">
+                                {orders.map((order) => (
+                                    <div key={order._id} className="p-4 space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="text-xs font-bold text-primary-600">#{order.orderId}</p>
+                                                <h4 className="font-bold text-slate-900">{order.customerName}</h4>
                                             </div>
+                                            <p className="font-black text-slate-900">₹{order.totalPrice?.toFixed(2)}</p>
                                         </div>
-                                    ))}
-                                    {orders.length === 0 && (
-                                        <div className="p-10 text-center text-slate-400">No orders found.</div>
-                                    )}
-                                </div>
-                            </>
-                        )}
-                    </div>
+                                        <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl">
+                                            <select
+                                                value={order.status}
+                                                onChange={(e) => handleStatusChange(order._id, e.target.value)}
+                                                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider outline-none ${getStatusColor(order.status)}`}
+                                            >
+                                                {['Received', 'In Design', 'Printing', 'Ready', 'Delivered', 'Cancelled'].map(s => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                            <button onClick={() => { setSelectedOrder(order); setIsOrderModalOpen(true); }} className="text-primary-600 font-bold text-xs">View Details</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {orders.length === 0 && (
+                                <div className="p-20 text-center text-slate-400 font-bold">No orders found.</div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -854,6 +1093,11 @@ const AdminDashboard = () => {
                 handleDeleteOrder={handleDeleteOrder}
                 handleDownload={handleDownload}
                 getStatusColor={getStatusColor}
+            />
+            <CouponModal
+                isOpen={isCouponModalOpen}
+                onClose={() => setIsCouponModalOpen(false)}
+                handleCouponSubmit={handleCouponSubmit}
             />
         </div>
     );

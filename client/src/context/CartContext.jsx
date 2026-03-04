@@ -4,54 +4,133 @@ const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
+// IndexedDB Constants & Utils
+const IDB_NAME = 'FlashbackFramesCart';
+const STORE_NAME = 'itemImages';
+
+const openDB = () => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(IDB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
+    });
+};
+
+const saveFile = async (cartId, file) => {
+    if (!file) return;
+    try {
+        const db = await openDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(file, cartId);
+    } catch (err) {
+        console.error('IDB Save Error:', err);
+    }
+};
+
+const getFile = async (cartId) => {
+    try {
+        const db = await openDB();
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const request = tx.objectStore(STORE_NAME).get(cartId);
+        return new Promise((resolve) => {
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => resolve(null);
+        });
+    } catch (err) {
+        console.error('IDB Get Error:', err);
+        return null;
+    }
+};
+
+const deleteFile = async (cartId) => {
+    try {
+        const db = await openDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(cartId);
+    } catch (err) {
+        console.error('IDB Delete Error:', err);
+    }
+};
+
+const clearIDB = async () => {
+    try {
+        const db = await openDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+    } catch (err) {
+        console.error('IDB Clear Error:', err);
+    }
+};
+
 export const CartProvider = ({ children }) => {
     const [cartItems, setCartItems] = useState([]);
+    const [isHydrated, setIsHydrated] = useState(false);
 
-    // Load cart from localStorage
+    // Initial load from localStorage and IndexedDB
     useEffect(() => {
-        const savedCart = localStorage.getItem('cart');
-        if (savedCart) {
-            try {
-                // Note: File objects cannot be saved in localStorage.
-                // We'll only save metadata and handle re-uploading if needed,
-                // or just accept that images are lost on refresh for now (rare case).
-                // Actually, let's keep the images in state and only save IDs to localStorage.
-                const items = JSON.parse(savedCart);
-                setCartItems(items);
-            } catch (e) {
-                console.error('Failed to parse cart:', e);
+        const loadCart = async () => {
+            const savedCart = localStorage.getItem('cart');
+            if (savedCart) {
+                try {
+                    const items = JSON.parse(savedCart);
+                    // Re-link File objects from IndexedDB
+                    const hydratedItems = await Promise.all(items.map(async (item) => {
+                        const file = await getFile(item.cartId);
+                        return { ...item, imageFile: file };
+                    }));
+                    setCartItems(hydratedItems);
+                } catch (e) {
+                    console.error('Failed to parse cart:', e);
+                }
             }
-        }
+            setIsHydrated(true);
+        };
+        loadCart();
     }, []);
 
-    // Save cart to localStorage (without File objects)
+    // Save metadata to localStorage when items change
     useEffect(() => {
-        const itemsToSave = cartItems.map(item => ({
-            ...item,
-            imageFile: null // Can't save File object
-        }));
-        localStorage.setItem('cart', JSON.stringify(itemsToSave));
-    }, [cartItems]);
+        if (!isHydrated) return;
 
-    const addToCart = (product, details, imageFile) => {
-        setCartItems(prev => {
-            // Unique ID for cart item (since same product can have different configurations)
-            const cartId = Date.now() + Math.random().toString(36).substr(2, 9);
-            return [...prev, {
-                cartId,
-                productId: product._id,
-                name: product.name,
-                price: product.price,
-                image: product.images?.[0], // Preview image
-                size: details.size,
-                material: details.material,
-                quantity: details.quantity || 1,
-                imageFile: imageFile // This is the user-uploaded file (File object)
-            }];
+        const itemsToSave = cartItems.map(item => {
+            const { imageFile, ...metadata } = item;
+            return metadata;
         });
+        localStorage.setItem('cart', JSON.stringify(itemsToSave));
+    }, [cartItems, isHydrated]);
+
+    const addToCart = async (product, details, imageFile) => {
+        const cartId = Date.now() + Math.random().toString(36).substr(2, 9);
+
+        // Save file to IndexedDB
+        if (imageFile) {
+            await saveFile(cartId, imageFile);
+        }
+
+        setCartItems(prev => [...prev, {
+            cartId,
+            productId: product._id,
+            name: product.name,
+            price: product.price,
+            image: product.images?.[0],
+            size: details.size,
+            material: details.material,
+            artStyle: details.artStyle || 'Normal (Original)',
+            quantity: details.quantity || 1,
+            personalMessage: details.personalMessage || '',
+            instructions: details.instructions || '',
+            imageFile: imageFile
+        }]);
     };
 
-    const removeFromCart = (cartId) => {
+    const removeFromCart = async (cartId) => {
+        await deleteFile(cartId);
         setCartItems(prev => prev.filter(item => item.cartId !== cartId));
     };
 
@@ -61,9 +140,10 @@ export const CartProvider = ({ children }) => {
         ));
     };
 
-    const clearCart = () => {
+    const clearCart = async () => {
         setCartItems([]);
         localStorage.removeItem('cart');
+        await clearIDB();
     };
 
     const getCartTotal = () => {
@@ -82,7 +162,8 @@ export const CartProvider = ({ children }) => {
             updateQuantity,
             clearCart,
             getCartTotal,
-            getCartCount
+            getCartCount,
+            isHydrated
         }}>
             {children}
         </CartContext.Provider>

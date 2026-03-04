@@ -34,3 +34,10 @@ export const paymentAPI = {
         headers: { 'Content-Type': 'multipart/form-data' }
     }),
 };
+
+export const couponAPI = {
+    getAll: () => api.get('/coupons'),
+    create: (data) => api.post('/coupons', data),
+    delete: (id) => api.delete(`/coupons/${id}`),
+    validate: (code, orderValue) => api.post('/coupons/validate', { code, orderValue }),
+};

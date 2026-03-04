@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Filter, Search, ArrowRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { productAPI } from '../services/apiService';
+import { FRAME_SIZES } from '../utils/constants';
 
 const Products = () => {
     const [activeCategory, setActiveCategory] = useState('All');
@@ -115,7 +116,11 @@ const Products = () => {
                                 <h3 className="text-lg font-bold text-slate-800 mb-1 leading-tight group-hover:text-primary-600 transition-colors h-14 overflow-hidden">
                                     {product.name}
                                 </h3>
-                                <p className="text-xl font-display font-bold text-primary-600 mb-4">₹{product.price}</p>
+                                <p className="text-xl font-display font-bold text-primary-600 mb-4">
+                                    {product.useGlobalPricing
+                                        ? `From ₹${FRAME_SIZES[0].mat}`
+                                        : `₹${product.price}`}
+                                </p>
                                 <Link
                                     to={`/product/${product._id}`}
                                     className="btn btn-primary w-full flex items-center justify-center gap-2"

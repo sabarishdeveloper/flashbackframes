@@ -74,6 +74,7 @@ exports.verifyAndCreateOrder = async (req, res) => {
         }
 
         const items = typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson;
+        const { couponCode, discountAmount: discountAmountFromClient } = req.body;
 
         if (!items || items.length === 0) {
             return res.status(400).json({ success: false, error: 'No items in order' });
@@ -82,16 +83,19 @@ exports.verifyAndCreateOrder = async (req, res) => {
         // Generate unique Order ID
         const orderId = `FF-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
-        // Process items and calculate total
-        let totalPrice = 0;
+        // Process items and calculate subtotal
+        let subtotal = 0;
         const processedItems = items.map((item, index) => {
             const itemTotal = item.productPrice * item.quantity;
-            totalPrice += itemTotal;
+            subtotal += itemTotal;
             return {
                 ...item,
                 uploadedImage: req.files[index].path
             };
         });
+
+        const discountAmount = Number(discountAmountFromClient) || 0;
+        const totalPrice = subtotal - discountAmount;
 
         const order = await Order.create({
             orderId,
@@ -100,6 +104,9 @@ exports.verifyAndCreateOrder = async (req, res) => {
             address,
             email,
             items: processedItems,
+            subtotal,
+            discountAmount,
+            couponCode,
             totalPrice,
             paymentStatus: 'Paid',
             paymentMethod: paymentMethod || 'Prepaid',

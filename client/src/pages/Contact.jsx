@@ -21,7 +21,7 @@ const Contact = () => {
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-slate-900">Email Us</h4>
-                                        <p className="text-sm text-slate-500">flashback365@gmail.com</p>
+                                        <p className="text-sm text-slate-500">flashbackphotoshop@gmail.com</p>
                                     </div>
                                 </div>
 
@@ -31,7 +31,7 @@ const Contact = () => {
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-slate-900">Call Us</h4>
-                                        <p className="text-sm text-slate-500">+91 94432 62643</p>
+                                        <p className="text-sm text-slate-500">+91 79040 26218</p>
                                     </div>
                                 </div>
 
@@ -41,7 +41,7 @@ const Contact = () => {
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-slate-900">Visit Us</h4>
-                                        <p className="text-sm text-slate-500">148, Palayamkottai Road, Opposite South Police Station, Toovipuram, Thoothukudi, Tamil Nadu 628001</p>
+                                        <p className="text-sm text-slate-500">149, Arun Towers, Opposite South Police Station, Thoothukudi, Tamil Nadu 628001</p>
                                     </div>
                                 </div>
                             </div>

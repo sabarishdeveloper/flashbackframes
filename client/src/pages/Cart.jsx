@@ -9,8 +9,8 @@ const Cart = () => {
     const navigate = useNavigate();
 
     const subtotal = getCartTotal();
-    const tax = subtotal * 0.08;
-    const total = subtotal + tax;
+    const tax = 0;
+    const total = subtotal;
 
     const handleCheckout = () => {
         // Check if all items have uploaded images
@@ -81,8 +81,14 @@ const Cart = () => {
                                         <h3 className="text-xl font-bold text-slate-900 mb-1">{item.name}</h3>
                                         <div className="flex flex-wrap justify-center sm:justify-start gap-3 mb-4 text-sm font-medium text-slate-500">
                                             <span className="bg-slate-100 px-2.5 py-1 rounded-lg">Size: {item.size}</span>
-                                            <span className="bg-slate-100 px-2.5 py-1 rounded-lg">Material: {item.material}</span>
+                                            <span className="bg-slate-100 px-2.5 py-1 rounded-lg">Finish: {item.material}</span>
                                         </div>
+                                        {(item.personalMessage || item.instructions) && (
+                                            <div className="mb-4 space-y-1">
+                                                {item.personalMessage && <p className="text-[10px] text-slate-500 line-clamp-1"><span className="font-bold text-primary-600 uppercase tracking-widest text-[8px] mr-1">Message:</span> "{item.personalMessage}"</p>}
+                                                {item.instructions && <p className="text-[10px] text-slate-500 line-clamp-1"><span className="font-bold text-orange-600 uppercase tracking-widest text-[8px] mr-1">Notes:</span> {item.instructions}</p>}
+                                            </div>
+                                        )}
                                         <div className="flex items-center justify-center sm:justify-start gap-4">
                                             <div className="flex items-center bg-slate-100 rounded-xl p-1">
                                                 <button
@@ -132,10 +138,6 @@ const Cart = () => {
                                 <div className="flex justify-between text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
                                     <span className="font-medium">Subtotal</span>
                                     <span className="font-bold">₹{subtotal.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between text-slate-600 p-3">
-                                    <span className="font-medium">Estimated Tax (8%)</span>
-                                    <span className="font-bold">₹{tax.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-slate-600 p-3">
                                     <span className="font-medium">Shipping</span>

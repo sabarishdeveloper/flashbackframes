@@ -63,15 +63,15 @@ const Footer = () => {
                         <ul className="space-y-4 text-sm">
                             <li className="flex gap-3">
                                 <MapPin size={18} className="text-primary-500 flex-shrink-0" />
-                                <span>148, Palayamkottai Road, Opposite South Police Station, Toovipuram, Thoothukudi, Tamil Nadu 628001</span>
+                                <span>149, Arun Towers, Opposite South Police Station, Thoothukudi, Tamil Nadu 628001</span>
                             </li>
                             <li className="flex gap-3">
                                 <Phone size={18} className="text-primary-500 flex-shrink-0" />
-                                <span>+91 94432 62643</span>
+                                <span>+91 79040 26218</span>
                             </li>
                             <li className="flex gap-3">
                                 <Mail size={18} className="text-primary-500 flex-shrink-0" />
-                                <span>flashback365@gmail.com</span>
+                                <span>flashbackphotoshop@gmail.com</span>
                             </li>
                         </ul>
                     </div>

@@ -11,25 +11,15 @@ mongoose.connect(process.env.MONGODB_URI);
 
 const products = [
     {
-        name: 'Minimalist Oak Frame',
+        name: 'Classic Photo Frame (All Sizes)',
         category: 'Photo Frames',
-        price: 29.99,
-        description: 'A beautifully crafted oak frame with a minimalist design. Perfect for modern interiors.',
+        price: 0, // Price will be determined by size
+        description: 'Premium quality photo frames available in all standard sizes with fixed pricing. Perfect for preserving your best moments.',
         options: {
-            sizes: ['5x7', '8x10', '11x14', '16x20'],
-            materials: ['Wood', 'Metal', 'Plastic']
+            sizes: ['8x6', '10x8', '12x8', '12x10', '10x15', '12x15', '12x18', '12x24', '12x30', '12x36', '15x20', '16x20', '16x24', '18x24', '20x24', '20x30', '24x36', '30x40', '40x60'],
+            materials: []
         },
-        images: []
-    },
-    {
-        name: 'Personalized Mug',
-        category: 'Custom Gifts',
-        price: 14.99,
-        description: 'Start your morning with a smile. High-quality ceramic mug with your custom photo.',
-        options: {
-            sizes: ['11oz', '15oz'],
-            materials: ['Ceramic']
-        },
+        useGlobalPricing: true,
         images: []
     }
 ];

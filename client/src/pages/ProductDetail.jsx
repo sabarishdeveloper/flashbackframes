@@ -5,6 +5,7 @@ import { ChevronLeft, Plus, Minus, ShoppingCart, Share2, Upload, Check, Loader2 
 import { productAPI } from '../services/apiService';
 import { toast } from 'sonner';
 import { useCart } from '../context/CartContext';
+import { FRAME_SIZES, getPriceForSize, FRAME_FINISHES, ART_STYLES } from '../utils/constants';
 
 const ProductDetail = () => {
     const { addToCart } = useCart();
@@ -54,9 +55,12 @@ const ProductDetail = () => {
                 return {
                     id: Math.random().toString(36).substr(2, 9),
                     file,
-                    size: product.options.sizes[0] || '',
-                    material: product.options.materials[0] || '',
-                    quantity: 1
+                    size: product.useGlobalPricing ? FRAME_SIZES[0].size : (product.options?.sizes[0] || ''),
+                    material: product.useGlobalPricing ? FRAME_FINISHES[0] : (product.options?.materials[0] || ''),
+                    artStyle: ART_STYLES[0].name,
+                    quantity: 1,
+                    personalMessage: '',
+                    instructions: ''
                 };
             }).filter(item => item !== null);
 
@@ -75,26 +79,42 @@ const ProductDetail = () => {
         setQueuedItems(prev => prev.filter(item => item.id !== id));
     };
 
-    const handleAddToCart = (isBuyNow = false) => {
+    const handleAddToCart = async (isBuyNow = false) => {
         if (queuedItems.length === 0) {
             toast.error('Please upload at least one photo');
             fileInputRef.current.scrollIntoView({ behavior: 'smooth' });
             return;
         }
 
-        queuedItems.forEach(item => {
-            addToCart(product, {
-                size: item.size,
-                material: item.material,
-                quantity: item.quantity
-            }, item.file);
-        });
+        try {
+            // Wait for all items to be added (including IDB file saving)
+            await Promise.all(queuedItems.map(async (item) => {
+                const itemPrice = product.useGlobalPricing
+                    ? getPriceForSize(item.size, item.material)
+                    : product.price;
 
-        toast.success(`${queuedItems.length} item(s) added to cart!`);
-        setQueuedItems([]); // Clear queue after adding
+                await addToCart({
+                    ...product,
+                    price: itemPrice
+                }, {
+                    size: item.size,
+                    material: item.material,
+                    artStyle: item.artStyle,
+                    quantity: item.quantity,
+                    personalMessage: item.personalMessage,
+                    instructions: item.instructions
+                }, item.file);
+            }));
 
-        if (isBuyNow) {
-            navigate('/cart');
+            toast.success(`${queuedItems.length} item(s) added to cart!`);
+            setQueuedItems([]); // Clear queue after adding
+
+            if (isBuyNow) {
+                navigate('/cart');
+            }
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            toast.error('Failed to add items to cart. Please try again.');
         }
     };
 
@@ -220,7 +240,16 @@ const ProductDetail = () => {
                             </div>
                             <h1 className="text-3xl md:text-4xl font-display font-bold text-slate-900 mb-4">{product.name}</h1>
                             <div className="flex items-center gap-4 mb-6">
-                                <span className="text-3xl font-display font-bold text-primary-600">₹{product.price}</span>
+                                <span className="text-3xl font-display font-bold text-primary-600">
+                                    {product.useGlobalPricing
+                                        ? `₹${getPriceForSize(queuedItems[0]?.size || FRAME_SIZES[0].size, queuedItems[0]?.material || FRAME_FINISHES[0])}`
+                                        : `₹${product.price}`}
+                                </span>
+                                {product.useGlobalPricing && (
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2 block">
+                                        Price varies by size
+                                    </span>
+                                )}
                                 <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
                                     <span className="text-yellow-700 font-bold text-sm">4.8</span>
                                     <div className="flex gap-0.5">
@@ -297,7 +326,7 @@ const ProductDetail = () => {
                                                                     <Plus size={12} />
                                                                 </button>
                                                             </div>
-                                                            <span className="text-xs text-slate-400 flex items-center">Size & Material options below</span>
+                                                            <span className="text-xs text-slate-400 flex items-center">Size & Finish options below</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -310,18 +339,62 @@ const ProductDetail = () => {
                                                             onChange={(e) => updateQueuedItem(item.id, { size: e.target.value })}
                                                             className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-primary-500"
                                                         >
-                                                            {product.options.sizes.map(s => <option key={s} value={s}>{s}</option>)}
+                                                            {product.useGlobalPricing
+                                                                ? FRAME_SIZES.map(s => <option key={s.size} value={s.size}>{s.size}</option>)
+                                                                : product.options.sizes.map(s => <option key={s} value={s}>{s}</option>)
+                                                            }
                                                         </select>
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Material</p>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Finish</p>
                                                         <select
                                                             value={item.material}
                                                             onChange={(e) => updateQueuedItem(item.id, { material: e.target.value })}
                                                             className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-primary-500"
                                                         >
-                                                            {product.options.materials.map(m => <option key={m} value={m}>{m}</option>)}
+                                                            {product.useGlobalPricing
+                                                                ? FRAME_FINISHES.map(f => <option key={f} value={f}>{f}</option>)
+                                                                : product.options.materials.map(m => <option key={m} value={m}>{m}</option>)
+                                                            }
                                                         </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Art Style / Design</p>
+                                                    <select
+                                                        value={item.artStyle}
+                                                        onChange={(e) => updateQueuedItem(item.id, { artStyle: e.target.value })}
+                                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-primary-500"
+                                                    >
+                                                        {ART_STYLES.map(style => (
+                                                            <option key={style.id} value={style.name}>
+                                                                {style.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div className="space-y-3 pt-2">
+                                                    <div className="space-y-1">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Personal Message (Optional)</p>
+                                                        <textarea
+                                                            value={item.personalMessage}
+                                                            onChange={(e) => updateQueuedItem(item.id, { personalMessage: e.target.value })}
+                                                            placeholder="Add a message to be printed or included with the frame..."
+                                                            rows="2"
+                                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-primary-500 resize-none"
+                                                        ></textarea>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Special Instructions (Optional)</p>
+                                                        <textarea
+                                                            value={item.instructions}
+                                                            onChange={(e) => updateQueuedItem(item.id, { instructions: e.target.value })}
+                                                            placeholder="Specific placement, color corrections, or notes for the designer..."
+                                                            rows="2"
+                                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-primary-500 resize-none"
+                                                        ></textarea>
                                                     </div>
                                                 </div>
                                             </motion.div>

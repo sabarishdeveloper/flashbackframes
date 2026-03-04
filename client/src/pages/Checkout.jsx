@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingBag, ChevronRight, CreditCard, Truck, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { orderAPI, paymentAPI } from '../services/apiService';
+import { orderAPI, paymentAPI, couponAPI } from '../services/apiService';
 import { loadRazorpayScript } from '../utils/loadRazorpay';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
@@ -33,10 +33,31 @@ const Checkout = () => {
     const [loading, setLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [orderResponse, setOrderResponse] = useState(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [validatingCoupon, setValidatingCoupon] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('Prepaid');
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode) return;
+        setValidatingCoupon(true);
+        try {
+            const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+            const res = await couponAPI.validate(couponCode, subtotal);
+            if (res.data.success) {
+                setAppliedCoupon(res.data.data);
+                toast.success('Coupon applied successfully!');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Invalid coupon');
+            setAppliedCoupon(null);
+        } finally {
+            setValidatingCoupon(false);
+        }
     };
 
     const handlePayment = async (razorpayOrderId, amount, orderData) => {
@@ -68,6 +89,10 @@ const Checkout = () => {
                     finalData.append('email', orderData.email);
                     finalData.append('address', orderData.address);
                     finalData.append('paymentMethod', 'Prepaid');
+                    if (appliedCoupon) {
+                        finalData.append('couponCode', appliedCoupon.code);
+                        finalData.append('discountAmount', appliedCoupon.discountAmount);
+                    }
 
                     const itemsToSubmit = items.map(item => ({
                         productId: item.productId,
@@ -75,7 +100,10 @@ const Checkout = () => {
                         productPrice: item.price,
                         size: item.size,
                         material: item.material,
-                        quantity: item.quantity
+                        artStyle: item.artStyle,
+                        quantity: item.quantity,
+                        personalMessage: item.personalMessage || '',
+                        instructions: item.instructions || ''
                     }));
                     finalData.append('items', JSON.stringify(itemsToSubmit));
 
@@ -134,8 +162,8 @@ const Checkout = () => {
         }
 
         const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-        const tax = subtotal * 0.08;
-        const totalAmount = subtotal + tax;
+        const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+        const totalAmount = subtotal - discountAmount;
 
         const orderData = {
             customerName: formData.customerName,
@@ -146,45 +174,14 @@ const Checkout = () => {
 
         setLoading(true);
         try {
-            const data = new FormData();
-            data.append('customerName', orderData.customerName);
-            data.append('mobile', orderData.mobile);
-            data.append('email', orderData.email);
-            data.append('address', orderData.address);
-
-            const itemsToSubmit = items.map(item => ({
-                productId: item.productId,
-                productName: item.name,
-                productPrice: item.price,
-                size: item.size,
-                material: item.material,
-                quantity: item.quantity
-            }));
-            data.append('items', JSON.stringify(itemsToSubmit));
-
-            items.forEach(item => {
-                data.append('images', item.imageFile);
-            });
-
-            if (paymentMethod === 'COD') {
-                data.append('paymentMethod', 'COD');
-                const orderCreateRes = await orderAPI.create(data);
-                if (orderCreateRes.data.success) {
-                    setOrderResponse(orderCreateRes.data.data);
-                    setIsSubmitted(true);
-                    clearCart();
-                    toast.success('Order placed successfully (COD)!');
-                }
-            } else {
-                // Razorpay
-                const rzpOrderRes = await paymentAPI.createOrder(totalAmount);
-                if (rzpOrderRes.data.success) {
-                    await handlePayment(
-                        rzpOrderRes.data.order.id,
-                        totalAmount,
-                        orderData
-                    );
-                }
+            // Razorpay Order Creation (just getting the RZP order ID)
+            const rzpOrderRes = await paymentAPI.createOrder(totalAmount);
+            if (rzpOrderRes.data.success) {
+                await handlePayment(
+                    rzpOrderRes.data.order.id,
+                    totalAmount,
+                    orderData
+                );
             }
         } catch (error) {
             console.error('Checkout error:', error);
@@ -204,7 +201,7 @@ const Checkout = () => {
 
     if (isSubmitted) {
         return (
-            <div className="py-24 min-h-[80vh] flex items-center justify-center">
+            <div className="py-8 min-h-[80vh] flex items-center justify-center">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -236,8 +233,8 @@ const Checkout = () => {
     }
 
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const tax = subtotal * 0.08;
-    const total = subtotal + tax;
+    const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+    const total = subtotal - discountAmount;
 
     return (
         <div className="py-20 min-h-screen bg-slate-50">
@@ -265,7 +262,7 @@ const Checkout = () => {
                                             value={formData.customerName}
                                             onChange={handleInputChange}
                                             type="text"
-                                            placeholder="John Doe"
+                                            placeholder="Vijay Kumar"
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
                                         />
                                     </div>
@@ -291,7 +288,7 @@ const Checkout = () => {
                                         value={formData.email}
                                         onChange={handleInputChange}
                                         type="email"
-                                        placeholder="john@example.com"
+                                        placeholder="viaykumar@example.com"
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
                                     />
                                 </div>
@@ -329,43 +326,24 @@ const Checkout = () => {
                                         <CreditCard className="text-primary-600" />
                                         Payment Method
                                     </h3>
-                                    <div className="space-y-3">
-                                        <div
-                                            onClick={() => setPaymentMethod('Prepaid')}
-                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${paymentMethod === 'Prepaid' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'}`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'Prepaid' ? 'border-primary-600' : 'border-slate-300'}`}>
-                                                    {paymentMethod === 'Prepaid' && <div className="w-2.5 h-2.5 bg-primary-600 rounded-full" />}
-                                                </div>
-                                                <div>
-                                                    <span className="font-bold block">Online Payment</span>
-                                                    <span className="text-xs">Secure UPI, Card, Netbanking</span>
-                                                </div>
+                                    <div className="p-4 rounded-xl border-2 border-primary-600 bg-primary-50 text-primary-700 flex justify-between items-center">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-5 h-5 rounded-full border-2 border-primary-600 flex items-center justify-center">
+                                                <div className="w-2.5 h-2.5 bg-primary-600 rounded-full" />
                                             </div>
-                                            <div className="flex gap-2">
-                                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">UPI</span>
-                                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">CARD</span>
+                                            <div>
+                                                <span className="font-bold block">Online Payment</span>
+                                                <span className="text-xs">Secure UPI, Card, Netbanking</span>
                                             </div>
                                         </div>
-
-
-                                        <div
-                                            onClick={() => setPaymentMethod('COD')}
-                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${paymentMethod === 'COD' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'}`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'COD' ? 'border-primary-600' : 'border-slate-300'}`}>
-                                                    {paymentMethod === 'COD' && <div className="w-2.5 h-2.5 bg-primary-600 rounded-full" />}
-                                                </div>
-                                                <div>
-                                                    <span className="font-bold block">Cash on Delivery</span>
-                                                    <span className="text-xs">Pay when your frame arrives</span>
-                                                </div>
-                                            </div>
-                                            <Truck size={20} className={paymentMethod === 'COD' ? 'text-primary-600' : 'text-slate-400'} />
+                                        <div className="flex gap-2">
+                                            <span className="text-[10px] bg-white/50 px-1.5 py-0.5 rounded font-bold">UPI</span>
+                                            <span className="text-[10px] bg-white/50 px-1.5 py-0.5 rounded font-bold">CARD</span>
                                         </div>
                                     </div>
+                                    {/* <p className="text-[10px] text-slate-400 mt-3 italic flex items-center gap-1">
+                                        <AlertCircle size={10} /> Cash on Delivery is currently unavailable.
+                                    </p> */}
                                 </div>
 
                                 <button
@@ -404,6 +382,35 @@ const Checkout = () => {
                                 ))}
                             </div>
 
+                            <div className="pt-4 border-t border-slate-100 mb-6">
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2">Have a coupon?</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter code"
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                        className="flex-grow px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-primary-500 uppercase"
+                                    />
+                                    <button
+                                        onClick={handleApplyCoupon}
+                                        disabled={validatingCoupon || !couponCode}
+                                        className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all disabled:opacity-50"
+                                    >
+                                        {validatingCoupon ? '...' : 'Apply'}
+                                    </button>
+                                </div>
+                                {appliedCoupon && (
+                                    <div className="mt-2 flex items-center justify-between bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle2 size={14} className="text-emerald-600" />
+                                            <span className="text-xs font-bold text-emerald-700">{appliedCoupon.code} Applied!</span>
+                                        </div>
+                                        <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-[10px] font-bold text-emerald-600 hover:underline">Remove</button>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="space-y-3 pt-6 border-t border-slate-100">
                                 <div className="flex justify-between text-slate-600 text-sm">
                                     <span>Subtotal</span>
@@ -413,10 +420,12 @@ const Checkout = () => {
                                     <span>Shipping</span>
                                     <span className="text-green-600 font-bold uppercase text-[10px]">FREE</span>
                                 </div>
-                                <div className="flex justify-between text-slate-600 text-sm">
-                                    <span>Estimated Tax</span>
-                                    <span>₹{tax.toFixed(2)}</span>
-                                </div>
+                                {appliedCoupon && (
+                                    <div className="flex justify-between text-green-600 text-sm font-bold">
+                                        <span>Discount ({appliedCoupon.code})</span>
+                                        <span>- ₹{appliedCoupon.discountAmount.toFixed(2)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-xl font-display font-black text-slate-900 pt-4 border-t border-slate-100">
                                     <span>Total</span>
                                     <span>₹{total.toFixed(2)}</span>

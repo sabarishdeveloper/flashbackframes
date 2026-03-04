@@ -24,6 +24,10 @@ const productSchema = new mongoose.Schema({
         sizes: [String],
         materials: [String],
     },
+    useGlobalPricing: {
+        type: Boolean,
+        default: false,
+    },
     createdAt: {
         type: Date,
         default: Date.now,
