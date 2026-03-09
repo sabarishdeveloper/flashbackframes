@@ -14,7 +14,7 @@ const Cart = () => {
 
     const handleCheckout = () => {
         // Check if all items have uploaded images
-        const missingImage = cartItems.find(item => !item.imageFile);
+        const missingImage = cartItems.find(item => !item.imageFiles || item.imageFiles.length === 0);
         if (missingImage) {
             toast.error(`Please upload an image for ${missingImage.name}`);
             navigate(`/product/${missingImage.productId}`);
@@ -64,9 +64,9 @@ const Cart = () => {
                                     className="card-premium p-6 flex flex-col sm:flex-row gap-6 items-center"
                                 >
                                     <div className="w-24 h-24 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100">
-                                        {item.imageFile ? (
+                                        {item.imageFiles && item.imageFiles.length > 0 ? (
                                             <img
-                                                src={URL.createObjectURL(item.imageFile)}
+                                                src={URL.createObjectURL(item.imageFiles[0])}
                                                 alt={item.name}
                                                 className="w-full h-full object-cover"
                                             />
@@ -82,6 +82,11 @@ const Cart = () => {
                                         <div className="flex flex-wrap justify-center sm:justify-start gap-3 mb-4 text-sm font-medium text-slate-500">
                                             <span className="bg-slate-100 px-2.5 py-1 rounded-lg">Size: {item.size}</span>
                                             <span className="bg-slate-100 px-2.5 py-1 rounded-lg">Finish: {item.material}</span>
+                                            {item.imageCount > 1 && (
+                                                <span className="bg-primary-50 text-primary-600 px-2.5 py-1 rounded-lg border border-primary-100 font-bold">
+                                                    {item.imageCount} Photos
+                                                </span>
+                                            )}
                                         </div>
                                         {(item.personalMessage || item.instructions) && (
                                             <div className="mb-4 space-y-1">

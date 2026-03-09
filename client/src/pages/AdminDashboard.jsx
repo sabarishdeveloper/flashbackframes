@@ -408,29 +408,74 @@ const OrderDetailsModal = ({
                                 uploadedImage: selectedOrder.uploadedImage
                             }]).map((item, idx) => (
                                 <div key={idx} className="flex flex-col md:flex-row gap-6 p-4 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-md transition-all">
-                                    <div className="w-full md:w-32 h-32 rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0">
-                                        <img src={getImageUrl(item.uploadedImage)} className="w-full h-full object-cover" alt="User upload" />
+                                    <div className="w-full md:w-32 flex flex-col gap-2 flex-shrink-0">
+                                        <div className="w-full h-32 rounded-xl overflow-hidden bg-white border border-slate-100">
+                                            <img src={getImageUrl(item.uploadedImages?.[0] || item.uploadedImage)} className="w-full h-full object-cover" alt="User upload" />
+                                        </div>
+                                        {item.uploadedImages?.length > 1 && (
+                                            <div className="flex gap-1 overflow-x-auto pb-1">
+                                                {item.uploadedImages.slice(1, 4).map((img, i) => (
+                                                    <div key={i} className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 border border-slate-100">
+                                                        <img src={getImageUrl(img)} className="w-full h-full object-cover" alt={`Upload ${i + 2}`} />
+                                                    </div>
+                                                ))}
+                                                {item.uploadedImages.length > 4 && (
+                                                    <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-500 flex-shrink-0">
+                                                        +{item.uploadedImages.length - 4}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex-grow space-y-2">
                                         <div className="flex justify-between items-start">
-                                            <h5 className="font-bold text-slate-800 text-lg">{item.productName || 'Order Product'}</h5>
+                                            <div>
+                                                <h5 className="font-bold text-slate-800 text-lg">{item.productName || 'Order Product'}</h5>
+                                                {item.uploadedImages?.length > 1 && (
+                                                    <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest bg-primary-50 px-2 py-0.5 rounded">
+                                                        Collage ({item.uploadedImages.length} Photos)
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex gap-2">
-                                                <a
-                                                    href={getImageUrl(item.uploadedImage)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="btn btn-secondary p-2 rounded-lg"
-                                                    title="View Full Image"
-                                                >
-                                                    <Eye size={18} />
-                                                </a>
-                                                <button
-                                                    onClick={() => handleDownload(getImageUrl(item.uploadedImage), `${selectedOrder.customerName.replace(/\s+/g, '-').toLowerCase()}-${idx + 1}.jpg`)}
-                                                    className="btn btn-primary p-2 rounded-lg"
-                                                    title="Download Photo"
-                                                >
-                                                    <Download size={18} />
-                                                </button>
+                                                {(item.uploadedImages?.length > 0 ? item.uploadedImages : [item.uploadedImage]).map((img, i) => (
+                                                    <div key={i} className="contents">
+                                                        {i === 0 || item.uploadedImages?.length <= 3 ? (
+                                                            <div className="flex gap-1">
+                                                                <a
+                                                                    href={getImageUrl(img)}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="btn btn-secondary p-2 rounded-lg"
+                                                                    title={item.uploadedImages?.length > 1 ? `View Photo ${i + 1}` : "View Full Image"}
+                                                                >
+                                                                    <Eye size={18} />
+                                                                </a>
+                                                                <button
+                                                                    onClick={() => handleDownload(getImageUrl(img), `${selectedOrder.customerName.replace(/\s+/g, '-').toLowerCase()}-${idx + 1}-img-${i + 1}.jpg`)}
+                                                                    className="btn btn-primary p-2 rounded-lg"
+                                                                    title={item.uploadedImages?.length > 1 ? `Download Photo ${i + 1}` : "Download Photo"}
+                                                                >
+                                                                    <Download size={18} />
+                                                                </button>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                ))}
+                                                {item.uploadedImages?.length > 3 && (
+                                                    <button
+                                                        onClick={() => {
+                                                            item.uploadedImages.forEach((img, i) => {
+                                                                setTimeout(() => {
+                                                                    handleDownload(getImageUrl(img), `${selectedOrder.customerName.replace(/\s+/g, '-').toLowerCase()}-${idx + 1}-img-${i + 1}.jpg`);
+                                                                }, i * 500);
+                                                            });
+                                                        }}
+                                                        className="btn btn-primary px-3 py-2 rounded-lg text-xs font-bold"
+                                                    >
+                                                        Download All ({item.uploadedImages.length})
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">

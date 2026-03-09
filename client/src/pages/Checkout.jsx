@@ -101,6 +101,7 @@ const Checkout = () => {
                         size: item.size,
                         material: item.material,
                         artStyle: item.artStyle,
+                        imageCount: item.imageCount || 1, // Tell server how many images to take
                         quantity: item.quantity,
                         personalMessage: item.personalMessage || '',
                         instructions: item.instructions || ''
@@ -108,7 +109,13 @@ const Checkout = () => {
                     finalData.append('items', JSON.stringify(itemsToSubmit));
 
                     items.forEach(item => {
-                        finalData.append('images', item.imageFile);
+                        if (Array.isArray(item.imageFiles)) {
+                            item.imageFiles.forEach(file => {
+                                finalData.append('images', file);
+                            });
+                        } else if (item.imageFiles) {
+                            finalData.append('images', item.imageFiles[0]);
+                        }
                     });
 
                     const verifyRes = await paymentAPI.verifyAndCreate(finalData);
@@ -371,7 +378,7 @@ const Checkout = () => {
                                 {items.map((item, idx) => (
                                     <div key={idx} className="flex gap-4 border-b border-slate-50 pb-4 last:border-0 last:pb-0">
                                         <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
-                                            {item.imageFile && <img src={URL.createObjectURL(item.imageFile)} alt="Preview" className="w-full h-full object-cover" />}
+                                            {item.imageFiles && item.imageFiles.length > 0 && <img src={URL.createObjectURL(item.imageFiles[0])} alt="Preview" className="w-full h-full object-cover" />}
                                         </div>
                                         <div className="flex-grow">
                                             <h4 className="font-bold text-slate-800 text-sm leading-tight">{item.name}</h4>

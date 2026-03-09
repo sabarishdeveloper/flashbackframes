@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Plus, Minus, ShoppingCart, Share2, Upload, Check, Loader2 } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ShoppingCart, Share2, Upload, Check, Loader2, Trash2, X } from 'lucide-react';
 import { productAPI } from '../services/apiService';
 import { toast } from 'sonner';
 import { useCart } from '../context/CartContext';
@@ -46,24 +46,53 @@ const ProductDetail = () => {
 
     const handleFileUpload = (e) => {
         const files = Array.from(e.target.files);
-        if (files.length > 0) {
-            const newItems = files.map(file => {
-                if (file.size > 10 * 1024 * 1024) {
-                    toast.error(`File ${file.name} exceeds 10MB limit`);
-                    return null;
-                }
-                return {
-                    id: Math.random().toString(36).substr(2, 9),
-                    file,
-                    size: product.useGlobalPricing ? FRAME_SIZES[0].size : (product.options?.sizes[0] || ''),
-                    material: product.useGlobalPricing ? FRAME_FINISHES[0] : (product.options?.materials[0] || ''),
-                    artStyle: ART_STYLES[0].name,
-                    quantity: 1,
-                    personalMessage: '',
-                    instructions: ''
-                };
-            }).filter(item => item !== null);
+        if (files.length === 0) return;
 
+        const validFiles = files.filter(file => {
+            if (file.size > 10 * 1024 * 1024) {
+                toast.error(`File ${file.name} exceeds 10MB limit`);
+                return false;
+            }
+            return true;
+        });
+
+        if (validFiles.length === 0) return;
+
+        const isCollage = product.category === 'Collage Frames';
+
+        if (isCollage) {
+            setQueuedItems(prev => {
+                if (prev.length === 0) {
+                    return [{
+                        id: Math.random().toString(36).substr(2, 9),
+                        files: validFiles,
+                        size: product.useGlobalPricing ? FRAME_SIZES[0].size : (product.options?.sizes[0] || ''),
+                        material: product.useGlobalPricing ? FRAME_FINISHES[0] : (product.options?.materials[0] || ''),
+                        artStyle: ART_STYLES[0].name,
+                        quantity: 1,
+                        personalMessage: '',
+                        instructions: ''
+                    }];
+                } else {
+                    // Update the first and only item for collages
+                    return [{
+                        ...prev[0],
+                        files: [...prev[0].files, ...validFiles]
+                    }];
+                }
+            });
+            toast.success(`${validFiles.length} photo(s) added to collage`);
+        } else {
+            const newItems = validFiles.map(file => ({
+                id: Math.random().toString(36).substr(2, 9),
+                file,
+                size: product.useGlobalPricing ? FRAME_SIZES[0].size : (product.options?.sizes[0] || ''),
+                material: product.useGlobalPricing ? FRAME_FINISHES[0] : (product.options?.materials[0] || ''),
+                artStyle: ART_STYLES[0].name,
+                quantity: 1,
+                personalMessage: '',
+                instructions: ''
+            }));
             setQueuedItems(prev => [...prev, ...newItems]);
             toast.success(`${newItems.length} photo(s) added successfully`);
         }
@@ -93,6 +122,8 @@ const ProductDetail = () => {
                     ? getPriceForSize(item.size, item.material)
                     : product.price;
 
+                const imageFiles = item.files || item.file;
+
                 await addToCart({
                     ...product,
                     price: itemPrice
@@ -103,7 +134,7 @@ const ProductDetail = () => {
                     quantity: item.quantity,
                     personalMessage: item.personalMessage,
                     instructions: item.instructions
-                }, item.file);
+                }, imageFiles);
             }));
 
             toast.success(`${queuedItems.length} item(s) added to cart!`);
@@ -140,7 +171,7 @@ const ProductDetail = () => {
                     {/* Gallery */}
                     <div className="lg:w-1/2 flex flex-col gap-6">
                         <div className="relative group">
-                            <div className="aspect-[4/3] rounded-3xl overflow-hidden bg-slate-100 shadow-xl border border-slate-100 relative">
+                            <div className="aspect-[4/4] rounded-3xl overflow-hidden bg-slate-100 shadow-xl border border-slate-100 relative">
                                 <AnimatePresence mode="wait">
                                     <motion.img
                                         key={activeImage}
@@ -293,41 +324,74 @@ const ProductDetail = () => {
                                     <div className="space-y-4">
                                         {queuedItems.map((item) => (
                                             <motion.div
-                                                layout
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
                                                 key={item.id}
-                                                className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4"
+                                                className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-5"
                                             >
-                                                <div className="flex gap-4">
-                                                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                                                        <img src={URL.createObjectURL(item.file)} alt="Preview" className="w-full h-full object-cover" />
-                                                    </div>
-                                                    <div className="flex-grow min-w-0">
-                                                        <div className="flex justify-between items-start">
-                                                            <h5 className="font-bold text-slate-800 text-sm truncate pr-4">{item.file.name}</h5>
-                                                            <button onClick={() => removeQueuedItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-1">
-                                                                <Minus size={16} />
+                                                {item.files ? (
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <h5 className="font-bold text-slate-800 text-sm">Collage Collection</h5>
+                                                                <p className="text-[10px] text-primary-600 font-bold uppercase tracking-widest">{item.files.length} Photos Selected</p>
+                                                            </div>
+                                                            <button onClick={() => removeQueuedItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50">
+                                                                <Trash2 size={18} />
                                                             </button>
                                                         </div>
-                                                        <div className="flex flex-wrap gap-2 mt-2">
-                                                            <div className="flex items-center bg-slate-50 rounded-lg p-1">
-                                                                <button
-                                                                    onClick={() => updateQueuedItem(item.id, { quantity: Math.max(1, item.quantity - 1) })}
-                                                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-white"
-                                                                >
-                                                                    <Minus size={12} />
-                                                                </button>
-                                                                <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
-                                                                <button
-                                                                    onClick={() => updateQueuedItem(item.id, { quantity: item.quantity + 1 })}
-                                                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-white"
-                                                                >
-                                                                    <Plus size={12} />
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {item.files.map((file, idx) => (
+                                                                <div key={idx} className="relative group/photo w-16 h-16 rounded-lg overflow-hidden border border-slate-100">
+                                                                    <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const newFiles = item.files.filter((_, i) => i !== idx);
+                                                                            if (newFiles.length === 0) {
+                                                                                removeQueuedItem(item.id);
+                                                                            } else {
+                                                                                updateQueuedItem(item.id, { files: newFiles });
+                                                                            }
+                                                                        }}
+                                                                        className="absolute top-0 right-0 bg-rose-500 text-white p-1 rounded-bl-lg opacity-0 group-hover/photo:opacity-100 transition-all scale-75"
+                                                                    >
+                                                                        <X size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex gap-4">
+                                                        <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-100">
+                                                            <img src={URL.createObjectURL(item.file)} alt="Preview" className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="flex-grow min-w-0">
+                                                            <div className="flex justify-between items-start">
+                                                                <h5 className="font-bold text-slate-800 text-sm truncate pr-4">{item.file.name}</h5>
+                                                                <button onClick={() => removeQueuedItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-1">
+                                                                    <Minus size={16} />
                                                                 </button>
                                                             </div>
-                                                            <span className="text-xs text-slate-400 flex items-center">Size & Finish options below</span>
                                                         </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-center justify-between py-2 border-y border-slate-50">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quantity</span>
+                                                    <div className="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-100">
+                                                        <button
+                                                            onClick={() => updateQueuedItem(item.id, { quantity: Math.max(1, item.quantity - 1) })}
+                                                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-white transition-colors"
+                                                        >
+                                                            <Minus size={12} />
+                                                        </button>
+                                                        <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
+                                                        <button
+                                                            onClick={() => updateQueuedItem(item.id, { quantity: item.quantity + 1 })}
+                                                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-white transition-colors"
+                                                        >
+                                                            <Plus size={12} />
+                                                        </button>
                                                     </div>
                                                 </div>
 

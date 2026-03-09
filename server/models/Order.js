@@ -39,10 +39,8 @@ const orderSchema = new mongoose.Schema({
             type: Number,
             default: 1,
         },
-        uploadedImage: {
-            type: String,
-            required: true
-        },
+        uploadedImages: [String],
+        uploadedImage: String, // Backward compatibility
         personalMessage: {
             type: String,
             default: ''

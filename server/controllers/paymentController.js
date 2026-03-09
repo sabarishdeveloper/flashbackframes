@@ -85,12 +85,23 @@ exports.verifyAndCreateOrder = async (req, res) => {
 
         // Process items and calculate subtotal
         let subtotal = 0;
+        let fileIndex = 0;
+
         const processedItems = items.map((item, index) => {
             const itemTotal = item.productPrice * item.quantity;
             subtotal += itemTotal;
+
+            // Handle multiple images if provided in imageCounts, else assume 1 per item
+            const count = (item.imageCount !== undefined) ? item.imageCount : 1;
+            const itemFiles = req.files.slice(fileIndex, fileIndex + count);
+            fileIndex += count;
+
+            const uploadedImages = itemFiles.map(file => file.path);
+
             return {
                 ...item,
-                uploadedImage: req.files[index].path
+                uploadedImages: uploadedImages,
+                uploadedImage: uploadedImages[0] // For backward compatibility
             };
         });
 

@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: [true, 'Please add a price'],
+        required: [function () { return !this.useGlobalPricing; }, 'Please add a price'],
     },
     images: [String],
     description: {

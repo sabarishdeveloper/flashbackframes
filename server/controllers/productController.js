@@ -57,6 +57,11 @@ exports.createProduct = async (req, res) => {
             }
         }
 
+        // Parse useGlobalPricing
+        if (productData.useGlobalPricing !== undefined) {
+            productData.useGlobalPricing = productData.useGlobalPricing === 'true' || productData.useGlobalPricing === true;
+        }
+
         const product = await Product.create(productData);
         res.status(201).json({ success: true, data: product });
     } catch (error) {
@@ -89,6 +94,11 @@ exports.updateProduct = async (req, res) => {
                 console.error('Error parsing options:', e);
                 delete productData.options;
             }
+        }
+
+        // Parse useGlobalPricing
+        if (productData.useGlobalPricing !== undefined) {
+            productData.useGlobalPricing = productData.useGlobalPricing === 'true' || productData.useGlobalPricing === true;
         }
 
         product = await Product.findByIdAndUpdate(req.params.id, productData, {

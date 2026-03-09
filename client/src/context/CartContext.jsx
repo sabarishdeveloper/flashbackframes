@@ -81,8 +81,8 @@ export const CartProvider = ({ children }) => {
                     const items = JSON.parse(savedCart);
                     // Re-link File objects from IndexedDB
                     const hydratedItems = await Promise.all(items.map(async (item) => {
-                        const file = await getFile(item.cartId);
-                        return { ...item, imageFile: file };
+                        const files = await getFile(item.cartId);
+                        return { ...item, imageFiles: Array.isArray(files) ? files : [files] };
                     }));
                     setCartItems(hydratedItems);
                 } catch (e) {
@@ -99,24 +99,26 @@ export const CartProvider = ({ children }) => {
         if (!isHydrated) return;
 
         const itemsToSave = cartItems.map(item => {
-            const { imageFile, ...metadata } = item;
+            const { imageFiles, ...metadata } = item;
             return metadata;
         });
         localStorage.setItem('cart', JSON.stringify(itemsToSave));
     }, [cartItems, isHydrated]);
 
-    const addToCart = async (product, details, imageFile) => {
+    const addToCart = async (product, details, imageFiles) => {
         const cartId = Date.now() + Math.random().toString(36).substr(2, 9);
+        const isArray = Array.isArray(imageFiles);
 
-        // Save file to IndexedDB
-        if (imageFile) {
-            await saveFile(cartId, imageFile);
+        // Save file(s) to IndexedDB
+        if (imageFiles) {
+            await saveFile(cartId, imageFiles);
         }
 
         setCartItems(prev => [...prev, {
             cartId,
             productId: product._id,
             name: product.name,
+            category: product.category,
             price: product.price,
             image: product.images?.[0],
             size: details.size,
@@ -125,7 +127,8 @@ export const CartProvider = ({ children }) => {
             quantity: details.quantity || 1,
             personalMessage: details.personalMessage || '',
             instructions: details.instructions || '',
-            imageFile: imageFile
+            imageFiles: isArray ? imageFiles : [imageFiles],
+            imageCount: isArray ? imageFiles.length : 1
         }]);
     };
 
