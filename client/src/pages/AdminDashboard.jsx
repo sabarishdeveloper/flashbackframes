@@ -36,9 +36,11 @@ const ProductModal = ({
     handleProductSubmit
 }) => {
     const [useGlobal, setUseGlobal] = useState(editingProduct?.useGlobalPricing || false);
+    const [isFeatured, setIsFeatured] = useState(editingProduct?.isFeatured || false);
 
     useEffect(() => {
         setUseGlobal(editingProduct?.useGlobalPricing || false);
+        setIsFeatured(editingProduct?.isFeatured || false);
     }, [editingProduct, isOpen]);
 
     if (!isOpen) return null;
@@ -102,20 +104,69 @@ const ProductModal = ({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-4 bg-primary-50/50 rounded-2xl border border-primary-100">
-                        <input
-                            type="checkbox"
-                            name="useGlobalPricing"
-                            id="useGlobalPricing"
-                            checked={useGlobal}
-                            onChange={(e) => setUseGlobal(e.target.checked)}
-                            className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <div>
-                            <label htmlFor="useGlobalPricing" className="text-sm font-bold text-slate-900 block">Use Global Frame Pricing</label>
-                            <p className="text-[10px] text-slate-500 leading-tight">If enabled, this product will use fixed prices based on frame sizes (8x6, 12x18, etc.)</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 p-4 bg-primary-50/50 rounded-2xl border border-primary-100">
+                            <input
+                                type="checkbox"
+                                name="useGlobalPricing"
+                                id="useGlobalPricing"
+                                checked={useGlobal}
+                                onChange={(e) => setUseGlobal(e.target.checked)}
+                                className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                            />
+                            <div>
+                                <label htmlFor="useGlobalPricing" className="text-sm font-bold text-slate-900 block">Use Global Frame Pricing</label>
+                                <p className="text-[10px] text-slate-500 leading-tight">If enabled, this product will use fixed prices based on sizes.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
+                            <input
+                                type="checkbox"
+                                name="isFeatured"
+                                id="isFeatured"
+                                checked={isFeatured}
+                                onChange={(e) => setIsFeatured(e.target.checked)}
+                                className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                            />
+                            <div>
+                                <label htmlFor="isFeatured" className="text-sm font-bold text-slate-900 block">Featured Product</label>
+                                <p className="text-[10px] text-slate-500 leading-tight">Show this product in the home page featured collection.</p>
+                            </div>
                         </div>
                     </div>
+
+                    {!useGlobal && (
+                        <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mat Price</label>
+                                <input
+                                    name="matPrice"
+                                    type="number"
+                                    defaultValue={editingProduct?.materialPrices?.mat || 0}
+                                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Glossy Price</label>
+                                <input
+                                    name="glossyPrice"
+                                    type="number"
+                                    defaultValue={editingProduct?.materialPrices?.glossy || 0}
+                                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Glitter Price</label>
+                                <input
+                                    name="glitterPrice"
+                                    type="number"
+                                    defaultValue={editingProduct?.materialPrices?.glitter || 0}
+                                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-widest text-slate-400">Description</label>
@@ -686,12 +737,22 @@ const AdminDashboard = () => {
         const sizes = formData.get('sizes_input')?.split(',').map(s => s.trim()).filter(s => s) || [];
         const materials = formData.get('materials_input')?.split(',').map(m => m.trim()).filter(m => m) || [];
         const useGlobalPricing = formData.get('useGlobalPricing') === 'on';
+        const isFeatured = formData.get('isFeatured') === 'on';
+
+        const matPrice = parseFloat(formData.get('matPrice')) || 0;
+        const glossyPrice = parseFloat(formData.get('glossyPrice')) || 0;
+        const glitterPrice = parseFloat(formData.get('glitterPrice')) || 0;
 
         formData.append('options', JSON.stringify({ sizes, materials }));
+        formData.append('materialPrices', JSON.stringify({ mat: matPrice, glossy: glossyPrice, glitter: glitterPrice }));
         formData.set('useGlobalPricing', useGlobalPricing);
+        formData.set('isFeatured', isFeatured);
 
         formData.delete('sizes_input');
         formData.delete('materials_input');
+        formData.delete('matPrice');
+        formData.delete('glossyPrice');
+        formData.delete('glitterPrice');
 
         try {
             if (editingProduct) {
@@ -920,7 +981,12 @@ const AdminDashboard = () => {
                                                     {product.useGlobalPricing ? 'Global Pricing' : `₹${product.price}`}
                                                 </td>
                                                 <td className="px-6 py-5">
-                                                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider w-fit">Active</span>
+                                                        {product.isFeatured && (
+                                                            <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider w-fit">Featured</span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-5">
                                                     <div className="flex gap-2">
@@ -946,7 +1012,12 @@ const AdminDashboard = () => {
                                             </div>
                                         </div>
                                         <div className="flex justify-between items-center bg-slate-50/50 p-2 rounded-xl">
-                                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
+                                            <div className="flex gap-1">
+                                                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">Active</span>
+                                                {product.isFeatured && (
+                                                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider">Featured</span>
+                                                )}
+                                            </div>
                                             <div className="flex gap-2">
                                                 <button onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }} className="p-2 bg-white border border-slate-200 text-slate-600 rounded-xl shadow-sm"><Edit2 size={16} /></button>
                                                 <button onClick={() => handleDeleteProduct(product._id)} className="p-2 bg-white border border-slate-200 text-rose-500 rounded-xl shadow-sm"><Trash2 size={16} /></button>

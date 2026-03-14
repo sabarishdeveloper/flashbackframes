@@ -8,6 +8,7 @@ import { FRAME_SIZES } from '../utils/constants';
 const Home = () => {
     const [featuredProducts, setFeaturedProducts] = useState([]);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isFeaturedExpanded, setIsFeaturedExpanded] = useState(false);
     const heroImages = [
         "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=800",
         "https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=800",
@@ -19,8 +20,15 @@ const Home = () => {
         const fetchRecent = async () => {
             try {
                 const response = await productAPI.getAll();
-                // Take first 4 for home page
-                setFeaturedProducts(response.data.data.slice(0, 4));
+                const allProducts = response.data.data;
+                const featured = allProducts.filter(p => p.isFeatured);
+
+                // If we have featured products, use them, otherwise fallback to show all
+                if (featured.length > 0) {
+                    setFeaturedProducts(featured);
+                } else {
+                    setFeaturedProducts(allProducts);
+                }
             } catch (err) {
                 console.error(err);
             }
@@ -30,6 +38,7 @@ const Home = () => {
         const timer = setInterval(() => {
             setCurrentImageIndex((prev) => (prev + 1) % heroImages.length);
         }, 5000);
+
         return () => clearInterval(timer);
     }, []);
 
@@ -160,31 +169,44 @@ const Home = () => {
                         viewport={{ once: true }}
                         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
                     >
-                        {featuredProducts.map((p) => (
-                            <motion.div key={p._id} variants={item} className="card-premium group overflow-hidden">
-                                <div className="relative h-64 overflow-hidden">
+                        {featuredProducts.slice(0, isFeaturedExpanded ? featuredProducts.length : 4).map((p) => (
+                            <div key={p._id} variants={item} className="card-premium group overflow-hidden h-full flex flex-col">
+                                <div className="relative h-64 overflow-hidden flex-shrink-0">
                                     <img
                                         src={getImageUrl(p.images)}
                                         alt={p.name}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                     />
                                 </div>
-                                <div className="p-5">
-                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">{p.category}</p>
-                                    <h3 className="text-lg font-bold text-slate-800 mb-1 group-hover:text-primary-600 transition-colors h-12 overflow-hidden">{p.name}</h3>
-                                    <p className="text-primary-600 font-bold">
-                                        {p.useGlobalPricing
-                                            ? `From ₹${FRAME_SIZES[0].mat}`
-                                            : `₹${p.price}`}
-                                    </p>
+                                <div className="p-5 flex flex-col flex-grow justify-between">
+                                    <div>
+                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">{p.category}</p>
+                                        <h3 className="text-lg font-bold text-slate-800 mb-1 group-hover:text-primary-600 transition-colors h-12 overflow-hidden">{p.name}</h3>
+                                        <p className="text-primary-600 font-bold">
+                                            {p.useGlobalPricing
+                                                ? `From ₹${FRAME_SIZES[0].mat}`
+                                                : `₹${p.price}`}
+                                        </p>
+                                    </div>
                                     <Link to={`/product/${p._id}`} className="btn btn-primary w-full flex items-center justify-center gap-2 mt-4">
                                         View Details
                                         <ArrowRight size={16} />
                                     </Link>
                                 </div>
-                            </motion.div>
+                            </div>
                         ))}
                     </motion.div>
+
+                    {!isFeaturedExpanded && featuredProducts.length > 4 && (
+                        <div className="flex justify-center mt-12">
+                            <button
+                                onClick={() => setIsFeaturedExpanded(true)}
+                                className="px-8 py-3 rounded-full border-2 border-primary-100 text-primary-600 font-bold hover:bg-primary-50 transition-colors"
+                            >
+                                View More
+                            </button>
+                        </div>
+                    )}
                 </div>
             </section>
 

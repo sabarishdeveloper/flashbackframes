@@ -1,23 +1,21 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Filter, Search, ArrowRight, Loader2 } from 'lucide-react';
+import { Search, ArrowRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { productAPI } from '../services/apiService';
 import { FRAME_SIZES } from '../utils/constants';
 
-const Products = () => {
-    const [activeCategory, setActiveCategory] = useState('All');
+const Gifts = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-
-    const categories = ['All', 'Photo Frames', 'Collage Frames'];
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 const response = await productAPI.getAll();
-                setProducts(response.data.data);
+                const gifts = response.data.data.filter(p => p.category === 'Custom Gifts');
+                setProducts(gifts);
             } catch (error) {
                 console.error('Error fetching products:', error);
             } finally {
@@ -28,11 +26,7 @@ const Products = () => {
     }, []);
 
     const filteredProducts = products.filter(p => {
-        const allowedCategories = ['Photo Frames', 'Collage Frames'];
-        if (!allowedCategories.includes(p.category)) return false;
-        const matchCategory = activeCategory === 'All' || p.category === activeCategory;
-        const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchCategory && matchSearch;
+        return p.name.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
     const getImageUrl = (images) => {
@@ -40,7 +34,7 @@ const Products = () => {
             if (images[0].startsWith('http')) return images[0];
             return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${images[0]}`;
         }
-        return 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?q=80&w=400';
+        return 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=400';
     };
 
     if (loading) {
@@ -56,8 +50,8 @@ const Products = () => {
             <div className="container mx-auto px-4 md:px-6">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                     <div>
-                        <h1 className="text-4xl md:text-5xl font-display font-bold text-slate-900 mb-4">Our Products</h1>
-                        <p className="text-slate-500">Find the perfect home for your favorite memories</p>
+                        <h1 className="text-4xl md:text-5xl font-display font-bold text-slate-900 mb-4">Unique Gifts</h1>
+                        <p className="text-slate-500">Find the perfect personalized gift for your loved ones</p>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -65,31 +59,13 @@ const Products = () => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <input
                                 type="text"
-                                placeholder="Search products..."
+                                placeholder="Search gifts..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all w-full md:w-64"
                             />
                         </div>
-                        <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                            <Filter size={20} className="text-slate-600" />
-                        </button>
                     </div>
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
-                    {categories.map((cat) => (
-                        <button
-                            key={cat}
-                            onClick={() => setActiveCategory(cat)}
-                            className={`whitespace-nowrap px-6 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === cat
-                                ? 'bg-primary-600 text-white shadow-md'
-                                : 'bg-white text-slate-600 border border-slate-200 hover:border-primary-300'
-                                }`}
-                        >
-                            {cat}
-                        </button>
-                    ))}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -137,7 +113,7 @@ const Products = () => {
 
                 {filteredProducts.length === 0 && (
                     <div className="text-center py-20">
-                        <h3 className="text-xl font-bold text-slate-400">No products found.</h3>
+                        <h3 className="text-xl font-bold text-slate-400">No gifts found.</h3>
                     </div>
                 )}
             </div>
@@ -145,4 +121,4 @@ const Products = () => {
     );
 };
 
-export default Products;
+export default Gifts;

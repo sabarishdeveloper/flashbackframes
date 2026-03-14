@@ -13,7 +13,12 @@ const productSchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: [function () { return !this.useGlobalPricing; }, 'Please add a price'],
+        default: 0,
+    },
+    materialPrices: {
+        mat: { type: Number, default: 0 },
+        glossy: { type: Number, default: 0 },
+        glitter: { type: Number, default: 0 }
     },
     images: [String],
     description: {
@@ -25,6 +30,10 @@ const productSchema = new mongoose.Schema({
         materials: [String],
     },
     useGlobalPricing: {
+        type: Boolean,
+        default: false,
+    },
+    isFeatured: {
         type: Boolean,
         default: false,
     },

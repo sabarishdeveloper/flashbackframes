@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
+import Gifts from './pages/Gifts';
 import Checkout from './pages/Checkout';
 import OrderTracking from './pages/OrderTracking';
 import Contact from './pages/Contact';
@@ -27,6 +28,7 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/gifts" element={<Gifts />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />

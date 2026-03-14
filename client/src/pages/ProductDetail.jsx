@@ -7,6 +7,10 @@ import { toast } from 'sonner';
 import { useCart } from '../context/CartContext';
 import { FRAME_SIZES, getPriceForSize, FRAME_FINISHES, ART_STYLES } from '../utils/constants';
 
+import femaleSizesImg from '../assets/female-sizes.jpeg';
+import maleSizesImg from '../assets/male-size.jpeg';
+import generalSizesImg from '../assets/sizes.jpeg';
+
 const ProductDetail = () => {
     const { addToCart } = useCart();
     const { id } = useParams();
@@ -118,9 +122,12 @@ const ProductDetail = () => {
         try {
             // Wait for all items to be added (including IDB file saving)
             await Promise.all(queuedItems.map(async (item) => {
-                const itemPrice = product.useGlobalPricing
-                    ? getPriceForSize(item.size, item.material)
-                    : product.price;
+                let itemPrice = product.price;
+                if (product.useGlobalPricing) {
+                    itemPrice = getPriceForSize(item.size, item.material);
+                } else if (item.material && product.materialPrices && product.materialPrices[item.material.toLowerCase()]) {
+                    itemPrice = product.materialPrices[item.material.toLowerCase()];
+                }
 
                 const imageFiles = item.files || item.file;
 
@@ -274,7 +281,12 @@ const ProductDetail = () => {
                                 <span className="text-3xl font-display font-bold text-primary-600">
                                     {product.useGlobalPricing
                                         ? `₹${getPriceForSize(queuedItems[0]?.size || FRAME_SIZES[0].size, queuedItems[0]?.material || FRAME_FINISHES[0])}`
-                                        : `₹${product.price}`}
+                                        : (
+                                            (queuedItems[0]?.material && product.materialPrices && product.materialPrices[queuedItems[0]?.material.toLowerCase()])
+                                                ? `₹${product.materialPrices[queuedItems[0]?.material.toLowerCase()]}`
+                                                : `₹${product.price}`
+                                        )
+                                    }
                                 </span>
                                 {product.useGlobalPricing && (
                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2 block">
@@ -512,6 +524,47 @@ const ProductDetail = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Size Guide Section */}
+            <div className="container mx-auto px-4 md:px-6 mt-24 mb-12">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl md:text-4xl font-display font-bold text-slate-900 mb-4">Size Guide</h2>
+                    <p className="text-slate-500 max-w-2xl mx-auto">Visualize how different frame sizes will look in your space. Use these guides to choose the perfect dimensions for your memories.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="card-premium p-4 group">
+                        <div className="rounded-2xl overflow-hidden bg-slate-100 aspect-[3/4]">
+                            <img
+                                src={generalSizesImg}
+                                alt="General Size Guide"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 mt-4 text-center">Standard Sizes</h3>
+                    </div>
+                    <div className="card-premium p-4 group">
+                        <div className="rounded-2xl overflow-hidden bg-slate-100 aspect-[3/4]">
+                            <img
+                                src={femaleSizesImg}
+                                alt="Scale Reference (Female)"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 mt-4 text-center">Scale Reference</h3>
+                    </div>
+                    <div className="card-premium p-4 group">
+                        <div className="rounded-2xl overflow-hidden bg-slate-100 aspect-[3/4]">
+                            <img
+                                src={maleSizesImg}
+                                alt="Scale Reference (Male)"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 mt-4 text-center">Scale Reference</h3>
                     </div>
                 </div>
             </div>

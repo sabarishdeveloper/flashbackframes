@@ -1,12 +1,25 @@
 const Product = require('../models/Product');
 const { cloudinary } = require('../middleware/upload');
+const NodeCache = require("node-cache");
+const cache = new NodeCache({ stdTTL: 60 });
 
 // @desc    Get all products
 // @route   GET /api/products
 // @access  Public
 exports.getProducts = async (req, res) => {
     try {
-        const products = await Product.find();
+        const cached = cache.get("products");
+        if (cached) {
+            return res.status(200).json({
+                success: true,
+                count: cached.length,
+                data: cached
+            });
+        }
+
+        const products = await Product.find().lean();
+        cache.set("products", products);
+
         res.status(200).json({
             success: true,
             count: products.length,
@@ -57,12 +70,28 @@ exports.createProduct = async (req, res) => {
             }
         }
 
+        // Parse materialPrices
+        if (productData.materialPrices && typeof productData.materialPrices === 'string') {
+            try {
+                productData.materialPrices = JSON.parse(productData.materialPrices);
+            } catch (e) {
+                console.error('Error parsing materialPrices:', e);
+                delete productData.materialPrices;
+            }
+        }
+
         // Parse useGlobalPricing
         if (productData.useGlobalPricing !== undefined) {
             productData.useGlobalPricing = productData.useGlobalPricing === 'true' || productData.useGlobalPricing === true;
         }
 
+        // Parse isFeatured
+        if (productData.isFeatured !== undefined) {
+            productData.isFeatured = productData.isFeatured === 'true' || productData.isFeatured === true;
+        }
+
         const product = await Product.create(productData);
+        cache.del("products");
         res.status(201).json({ success: true, data: product });
     } catch (error) {
         console.error('Create Product Error:', error);
@@ -96,15 +125,32 @@ exports.updateProduct = async (req, res) => {
             }
         }
 
+        // Parse materialPrices
+        if (productData.materialPrices && typeof productData.materialPrices === 'string') {
+            try {
+                productData.materialPrices = JSON.parse(productData.materialPrices);
+            } catch (e) {
+                console.error('Error parsing materialPrices:', e);
+                delete productData.materialPrices;
+            }
+        }
+
         // Parse useGlobalPricing
         if (productData.useGlobalPricing !== undefined) {
             productData.useGlobalPricing = productData.useGlobalPricing === 'true' || productData.useGlobalPricing === true;
+        }
+
+        // Parse isFeatured
+        if (productData.isFeatured !== undefined) {
+            productData.isFeatured = productData.isFeatured === 'true' || productData.isFeatured === true;
         }
 
         product = await Product.findByIdAndUpdate(req.params.id, productData, {
             new: true,
             runValidators: true
         });
+
+        cache.del("products");
 
         res.status(200).json({ success: true, data: product });
     } catch (error) {
@@ -138,6 +184,7 @@ exports.deleteProduct = async (req, res) => {
         }
 
         await product.deleteOne();
+        cache.del("products");
         res.status(200).json({ success: true, data: {} });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
