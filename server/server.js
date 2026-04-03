@@ -4,12 +4,14 @@ const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
+const { connectRedis } = require('./config/redis');
 
 // Load env vars
 dotenv.config();
 
 // Connect to database
 connectDB();
+connectRedis();
 
 const app = express();
 

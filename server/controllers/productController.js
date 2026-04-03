@@ -1,25 +1,14 @@
 const Product = require('../models/Product');
 const { cloudinary } = require('../middleware/upload');
-const NodeCache = require("node-cache");
-const cache = new NodeCache({ stdTTL: 60 });
+const { clearCacheByPattern } = require('../services/cacheService');
 
 // @desc    Get all products
 // @route   GET /api/products
 // @access  Public
 exports.getProducts = async (req, res) => {
     try {
-        const cached = cache.get("products");
-        if (cached) {
-            return res.status(200).json({
-                success: true,
-                count: cached.length,
-                data: cached
-            });
-        }
-
         const products = await Product.find().lean();
-        cache.set("products", products);
-
+        
         res.status(200).json({
             success: true,
             count: products.length,
@@ -91,7 +80,7 @@ exports.createProduct = async (req, res) => {
         }
 
         const product = await Product.create(productData);
-        cache.del("products");
+        await clearCacheByPattern('products');
         res.status(201).json({ success: true, data: product });
     } catch (error) {
         console.error('Create Product Error:', error);
@@ -150,7 +139,7 @@ exports.updateProduct = async (req, res) => {
             runValidators: true
         });
 
-        cache.del("products");
+        await clearCacheByPattern('products');
 
         res.status(200).json({ success: true, data: product });
     } catch (error) {
@@ -184,7 +173,7 @@ exports.deleteProduct = async (req, res) => {
         }
 
         await product.deleteOne();
-        cache.del("products");
+        await clearCacheByPattern('products');
         res.status(200).json({ success: true, data: {} });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
