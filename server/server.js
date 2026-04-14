@@ -4,14 +4,14 @@ const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
-const { connectRedis } = require('./config/redis');
 
 // Load env vars
 dotenv.config();
 
 // Connect to database
 connectDB();
-connectRedis();
+
+
 
 const app = express();
 
@@ -20,6 +20,10 @@ app.use(express.json());
 
 // Enable CORS
 app.use(cors());
+
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
 
 // Dev logging middleware
 if (process.env.NODE_ENV === 'development') {

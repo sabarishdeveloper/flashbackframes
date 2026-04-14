@@ -1,6 +1,5 @@
 const Product = require('../models/Product');
 const { cloudinary } = require('../middleware/upload');
-const { clearCacheByPattern } = require('../services/cacheService');
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -80,7 +79,6 @@ exports.createProduct = async (req, res) => {
         }
 
         const product = await Product.create(productData);
-        await clearCacheByPattern('products');
         res.status(201).json({ success: true, data: product });
     } catch (error) {
         console.error('Create Product Error:', error);
@@ -139,8 +137,6 @@ exports.updateProduct = async (req, res) => {
             runValidators: true
         });
 
-        await clearCacheByPattern('products');
-
         res.status(200).json({ success: true, data: product });
     } catch (error) {
         console.error('Update Product Error:', error);
@@ -173,7 +169,6 @@ exports.deleteProduct = async (req, res) => {
         }
 
         await product.deleteOne();
-        await clearCacheByPattern('products');
         res.status(200).json({ success: true, data: {} });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
